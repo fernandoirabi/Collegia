@@ -1,0 +1,262 @@
+.section {
+  position: relative;
+  background: var(--color-ink);
+  padding: var(--space-32) 0;
+  overflow: hidden;
+}
+
+.bgBlock {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    135deg,
+    rgba(26, 79, 196, 0.25) 0%,
+    rgba(26, 79, 196, 0.05) 100%
+  );
+  pointer-events: none;
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-16);
+  align-items: start;
+}
+
+/* Text col */
+.textCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-top: var(--space-4);
+}
+
+.headline {
+  font-family: var(--font-serif);
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.headline em {
+  font-style: italic;
+  color: rgba(255,255,255,0.55);
+}
+
+.body {
+  font-size: 17px;
+  line-height: 1.75;
+  color: rgba(255,255,255,0.55);
+  max-width: 420px;
+}
+
+.featurePills {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.featurePill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 15px;
+  color: rgba(255,255,255,0.7);
+}
+
+/* Dashboard */
+.dashCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Stats row */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+}
+
+.statCard {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statCardBlue {
+  background: rgba(26, 79, 196, 0.35);
+  border-color: rgba(91, 143, 236, 0.4);
+}
+
+.statCardCoral {
+  background: rgba(217, 79, 67, 0.2);
+  border-color: rgba(217, 79, 67, 0.3);
+}
+
+.statNum {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  color: #fff;
+  line-height: 1;
+}
+
+.statLbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Timeline */
+.timeline {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6) var(--space-7);
+}
+
+.timelineTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.3);
+  margin-bottom: var(--space-5);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+}
+
+.step {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.stepLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.connector {
+  width: 2px;
+  flex: 1;
+  background: rgba(255,255,255,0.1);
+  margin: 4px 0;
+  min-height: 16px;
+}
+
+.connectorDone {
+  background: var(--color-green);
+}
+
+.stepRight {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: var(--space-5);
+  flex: 1;
+}
+
+.stepLabel {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.labelDone { color: rgba(255,255,255,0.55); }
+.labelProgress { color: #fff; }
+.labelUpcoming { color: rgba(255,255,255,0.3); }
+
+.progressMini {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: 4px;
+}
+
+.progressPct {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.done {
+  font-size: 12px;
+  color: var(--color-green);
+  font-weight: 600;
+}
+
+/* Next step */
+.nextStep {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  background: var(--color-primary);
+  border-radius: var(--radius-lg);
+}
+
+.nextStepIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.nextStepLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 3px;
+}
+
+.nextStepText {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-12);
+  }
+
+  .statsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .statsRow {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+  }
+}

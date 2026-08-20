@@ -1,0 +1,252 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  transition: all var(--duration-normal) var(--ease);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: transparent;
+}
+
+.featured {
+  grid-column: span 2;
+}
+
+.featured .imageWrap {
+  height: 360px;
+}
+
+/* Image */
+.imageWrap {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.imageWrap img {
+  transition: transform var(--duration-slow) var(--ease);
+}
+
+.card:hover .imageWrap img {
+  transform: scale(1.04);
+}
+
+.imageOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 40%,
+    rgba(0,0,0,0.35) 100%
+  );
+  z-index: 1;
+}
+
+.matchBadge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  box-shadow: var(--shadow-sm);
+}
+
+.typePill {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 2;
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+/* Content */
+.content {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex: 1;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.name {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: 1.3;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--color-ink-muted);
+  margin-top: 3px;
+}
+
+/* Stats */
+.stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.statVal {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: 1;
+}
+
+.statLbl {
+  font-size: 11px;
+  color: var(--color-ink-faint);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.statDivider {
+  width: 1px;
+  height: 28px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+/* Tags */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tag {
+  padding: 3px 10px;
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.02em;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.costRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.aidBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: var(--color-green-light);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-green);
+}
+
+/* Dot */
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotGreen { background: var(--color-green); }
+.dotAmber { background: var(--color-amber); }
+.dotCoral { background: var(--color-coral); }
+
+/* Compact variant */
+.compact {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: all var(--duration-fast) var(--ease);
+  text-decoration: none;
+  color: inherit;
+}
+
+.compact:hover {
+  border-color: var(--color-primary-mid);
+  background: var(--color-primary-light);
+}
+
+.compactImage {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.compactInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.compactName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: 1.3;
+}
+
+.compactLocation {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}

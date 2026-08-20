@@ -1,0 +1,60 @@
+// ============================================================
+// COLLEGIA — Canonical Major List (seed)
+// ============================================================
+
+export interface SeedMajor {
+  name: string;
+  category: string;
+}
+
+export const seedMajors: SeedMajor[] = [
+  { name: "Computer Science", category: "STEM" },
+  { name: "Engineering", category: "STEM" },
+  { name: "Mechanical Engineering", category: "STEM" },
+  { name: "Electrical Engineering", category: "STEM" },
+  { name: "Civil Engineering", category: "STEM" },
+  { name: "Aerospace Engineering", category: "STEM" },
+  { name: "Computer Engineering", category: "STEM" },
+  { name: "Mathematics", category: "STEM" },
+  { name: "Physics", category: "STEM" },
+  { name: "Chemistry", category: "STEM" },
+  { name: "Biology", category: "STEM" },
+  { name: "Data Science", category: "STEM" },
+  { name: "Environmental Science", category: "STEM" },
+  { name: "Agriculture", category: "STEM" },
+  { name: "Nursing", category: "Health" },
+  { name: "Pre-Medicine", category: "Health" },
+  { name: "Public Health", category: "Health" },
+  { name: "Psychology", category: "Social Sciences" },
+  { name: "Neuroscience", category: "STEM" },
+  { name: "Business", category: "Business" },
+  { name: "Economics", category: "Social Sciences" },
+  { name: "Finance", category: "Business" },
+  { name: "Marketing", category: "Business" },
+  { name: "Accounting", category: "Business" },
+  { name: "Political Science", category: "Social Sciences" },
+  { name: "International Relations", category: "Social Sciences" },
+  { name: "Sociology", category: "Social Sciences" },
+  { name: "Anthropology", category: "Social Sciences" },
+  { name: "History", category: "Humanities" },
+  { name: "Philosophy", category: "Humanities" },
+  { name: "English Literature", category: "Humanities" },
+  { name: "Linguistics", category: "Humanities" },
+  { name: "Art History", category: "Humanities" },
+  { name: "Communications", category: "Social Sciences" },
+  { name: "Journalism", category: "Humanities" },
+  { name: "Film", category: "Arts" },
+  { name: "Fine Arts", category: "Arts" },
+  { name: "Design", category: "Arts" },
+  { name: "Graphic Design", category: "Arts" },
+  { name: "Music", category: "Arts" },
+  { name: "Architecture", category: "Arts" },
+  { name: "Education", category: "Education" },
+  { name: "Law", category: "Law" },
+  { name: "Criminal Justice", category: "Social Sciences" },
+  { name: "Social Work", category: "Social Sciences" },
+  { name: "Hospitality Management", category: "Business" },
+  { name: "Sports Management", category: "Business" },
+  { name: "Kinesiology", category: "Health" },
+  { name: "Health Sciences", category: "Health" },
+];

@@ -1,0 +1,575 @@
+// ============================================================
+// COLLEGIA — Prisma Schema
+// Supabase PostgreSQL
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum CollegeType {
+  PUBLIC
+  PRIVATE
+}
+
+enum CollegeSize {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+enum CampusSetting {
+  URBAN
+  SUBURBAN
+  RURAL
+}
+
+enum CollegeRegion {
+  EAST_COAST
+  WEST_COAST
+  MIDWEST
+  SOUTH
+  SOUTHWEST
+  NORTHEAST
+  OTHER
+}
+
+enum MatchClassification {
+  STRONG_MATCH
+  TARGET
+  REACH
+}
+
+enum ApplicationStatus {
+  NOT_STARTED
+  DRAFTING
+  SUBMITTED
+  DECISION_PENDING
+  ACCEPTED
+  WAITLISTED
+  DEFERRED
+  REJECTED
+  ENROLLED
+  DECLINED
+}
+
+enum ApplicationPlan {
+  EARLY_ACTION
+  EARLY_DECISION
+  RESTRICTIVE_EARLY_ACTION
+  REGULAR_DECISION
+  ROLLING
+  TRANSFER
+  OTHER
+}
+
+enum ApplicationPlatform {
+  COMMON_APP
+  COALITION
+  SCHOOL_APPLICATION
+  OTHER
+}
+
+enum GoalCategory {
+  ACADEMIC
+  TESTING
+  EXTRACURRICULAR
+  APPLICATION
+  FINANCIAL
+}
+
+enum GoalPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum RecommendationCategory {
+  ACADEMIC
+  TESTING
+  EXTRACURRICULAR
+  FINANCIAL
+  INTERNATIONAL
+  COLLEGE_LIST
+  GENERAL
+}
+
+enum RecommendationStatus {
+  OPEN
+  DONE
+  DISMISSED
+}
+
+enum MatchConfidence {
+  HIGH
+  MEDIUM
+  LIMITED
+}
+
+enum DataVerificationStatus {
+  DEMO
+  UNVERIFIED
+  PENDING_VERIFICATION
+  VERIFIED
+}
+
+// ============================================================
+// USERS & STUDENT DATA
+// ============================================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  role      UserRole @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile        StudentProfile?
+  preferences    CollegePreference?
+  financialAid   FinancialAidProfile?
+  international  InternationalProfile?
+  savedColleges  SavedCollege[]
+  goals          Goal[]
+  applications   Application[]
+  matchScores    MatchScore[]
+  matchHistory   MatchHistory[]
+  recommendations Recommendation[]
+
+  @@map("users")
+}
+
+model StudentProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Identity
+  firstName               String?
+  lastName                String?
+  country                 String?
+  isInternationalStudent  Boolean  @default(true)
+
+  // Academics
+  gpa            Float?
+  gpaScale       Float?   @default(4.0)
+  satScore       Int?
+  actScore       Int?
+  classYear      Int?
+  intendedMajor  String?
+
+  // Application information
+  applicationYear         Int?
+  intendedEnrollmentYear  Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("student_profiles")
+}
+
+model CollegePreference {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Location
+  preferredStates  String[]
+  preferredRegions String[]
+
+  // School type
+  preferredSizes   String[] // "Small" | "Medium" | "Large"
+  publicPrivate    String[] // "Public" | "Private"
+  settings         String[] // "Urban" | "Suburban" | "Rural"
+
+  // Campus interests
+  sports           String[]
+  clubs            String[]
+  interests        String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("college_preferences")
+}
+
+model FinancialAidProfile {
+  id                 String  @id @default(cuid())
+  userId             String  @unique
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  annualBudget       Int?
+  requiresFinancialAid Boolean?
+  requiresScholarship   Boolean?
+  currency           String? @default("USD")
+  fundingSource      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("financial_aid_profiles")
+}
+
+model InternationalProfile {
+  id                      String  @id @default(cuid())
+  userId                  String  @unique
+  user                    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  country                 String?
+  englishProficiencyTest  String? // "TOEFL" | "IELTS" | "Duolingo" | ...
+  englishProficiencyScore Int?
+  ieltsScore              Float?
+  visaType                String? // "F-1" | ...
+  needsI20Support         Boolean?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("international_profiles")
+}
+
+model SavedCollege {
+  id                  String              @id @default(cuid())
+  userId              String
+  collegeId           String
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college             College             @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  // Demo/static until the real Match Engine is implemented.
+  matchClassification MatchClassification?
+  matchScore          Int?
+  notes               String?
+  savedAt             DateTime            @default(now())
+
+  @@unique([userId, collegeId])
+  @@map("saved_colleges")
+}
+
+// ============================================================
+// MATCH ENGINE — RESULT STORAGE
+//
+// These tables are the persistence layer for the future
+// COLLEGIA MATCH ENGINE v1. They are added NOW so the schema is
+// ready, but no scoring formulas have been implemented.
+//
+// MatchScore     : the current, per-college match result with the
+//                  full per-dimension breakdown + reasons.
+// MatchHistory   : append-only snapshots used to show how a match
+//                  score changes over time (e.g. 78 → 83).
+// Recommendation : Improvement Engine output — a concrete "next
+//                  move" the student can act on, optionally tied to
+//                  a Goal and/or a College.
+// ============================================================
+
+model MatchScore {
+  id            String @id @default(cuid())
+  userId        String
+  collegeId     String
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college       College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  matchScore     Int
+  classification MatchClassification
+  engineVersion  String
+  isDemo         Boolean           @default(true)
+  computedAt     DateTime          @default(now())
+
+  dimensions MatchDimensionScore[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, collegeId])
+  @@index([userId])
+  @@index([collegeId])
+  @@map("match_scores")
+}
+
+model MatchDimensionScore {
+  id           String    @id @default(cuid())
+  matchScoreId String
+  matchScore   MatchScore @relation(fields: [matchScoreId], references: [id], onDelete: Cascade)
+
+  // dimension matches the TS union in match.service.ts:
+  // "academic" | "major" | "financial" | "location" |
+  // "collegePreference" | "international" | "interests"
+  dimension  String
+  label      String
+  score      Int
+  confidence MatchConfidence @default(MEDIUM)
+  reasons    String[]
+
+  @@index([matchScoreId])
+  @@map("match_dimension_scores")
+}
+
+model MatchHistory {
+  id            String @id @default(cuid())
+  userId        String
+  collegeId     String
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college       College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  matchScore     Int
+  classification MatchClassification
+  engineVersion  String
+  isDemo         Boolean   @default(true)
+  computedAt     DateTime  @default(now())
+
+  @@index([userId, collegeId, computedAt])
+  @@map("match_history")
+}
+
+model Recommendation {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  collegeId String?
+  college   College? @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  goalId    String?
+  goal      Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
+
+  category        RecommendationCategory @default(GENERAL)
+  title           String
+  description     String?
+  suggestedAction String?
+  potentialImpact Int? // estimated Collegia Match points (e.g. +5)
+  status          RecommendationStatus   @default(OPEN)
+  source          String? // e.g. "match-engine", "improvement-engine", "manual"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@map("recommendations")
+}
+
+model Goal {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title         String
+  description   String?
+  currentValue  Float?
+  targetValue   Float?
+  unit          String?
+  category      GoalCategory @default(ACADEMIC)
+  priority      GoalPriority @default(MEDIUM)
+  status        GoalStatus   @default(ACTIVE)
+  dueDate       DateTime?
+  completedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recommendations Recommendation[]
+
+  @@map("goals")
+}
+
+model Application {
+  id              String            @id @default(cuid())
+  userId          String
+  collegeId       String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college         College           @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  status          ApplicationStatus @default(NOT_STARTED)
+  plan            ApplicationPlan?
+  applicationYear Int?
+  submittedAt     DateTime?
+  decisionAt      DateTime?
+  notes           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, collegeId])
+  @@map("applications")
+}
+
+// ============================================================
+// COLLEGES
+// ============================================================
+
+model College {
+  id    String @id @default(cuid())
+  slug  String @unique
+  name  String
+  shortName String?
+
+  // Basic
+  website                 String?
+  city                    String
+  state                   String
+  stateCode               String
+  region                  CollegeRegion?
+  latitude                Float?
+  longitude               Float?
+  type                    CollegeType
+  setting                 CampusSetting?
+  sizeCategory            CollegeSize?
+  undergraduateEnrollment Int?
+  campusSizeAcres         Int?
+
+  // Admissions
+  acceptanceRate Float? // percent (0-100); null = unknown
+  avgGpa         Float?
+  gpaScale       Float?  @default(4.0)
+  satRangeMin    Int?
+  satRangeMax    Int?
+  actRangeMin    Int?
+  actRangeMax    Int?
+
+  // Academics
+  graduationRate       Float?
+  studentFacultyRatio  String?
+
+  // Cost
+  tuitionInState              Int?
+  tuitionOutOfState           Int?
+  tuitionInternational        Int?
+  roomAndBoard                Int?
+  estimatedTotalCostInternational Int?
+
+  // Financial aid
+  internationalAidAvailable Boolean?
+  meritScholarshipsAvailable Boolean?
+  needBasedAidAvailable     Boolean?
+  meetsFullNeed             Boolean?
+  avgAidInternational       Int?
+
+  // International
+  internationalPercentage    Float?
+  internationalPopulation    Int?
+  englishProficiencyRequirement String?
+  toeflMinimum               Int?
+  ieltsMinimum               Float?
+  i20Support                 Boolean?
+  optAvailable               Boolean?
+
+  // Student life
+  housing         String?
+  clubsCount      Int?
+  sports          String[]
+  greekLife       Boolean?
+
+  // Presentation
+  image      String?
+  coverImage String?
+  tags       String[]
+  featured   Boolean @default(false)
+
+  // Data provenance
+  isDemoData         Boolean               @default(true)
+  dataSource         String?
+  dataSourceUrl      String?
+  dataCollectedAt    DateTime?
+  dataYear           Int?
+  verificationStatus DataVerificationStatus @default(DEMO)
+
+  majors      CollegeMajor[]
+  statistics  CollegeStatistic[]
+  deadlines   ApplicationDeadline[]
+  applications Application[]
+  savedBy     SavedCollege[]
+  matchScores MatchScore[]
+  matchHistory MatchHistory[]
+  recommendations Recommendation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([state])
+  @@index([region])
+  @@index([type])
+  @@index([sizeCategory])
+  @@map("colleges")
+}
+
+model Major {
+  id       String @id @default(cuid())
+  name     String @unique
+  category String?
+
+  colleges CollegeMajor[]
+  @@map("majors")
+}
+
+model CollegeMajor {
+  id             String  @id @default(cuid())
+  collegeId      String
+  majorId        String
+  college        College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  major          Major   @relation(fields: [majorId], references: [id], onDelete: Cascade)
+
+  isStrongProgram Boolean @default(false)
+  strength        Int?   // 1-5
+
+  @@unique([collegeId, majorId])
+  @@map("college_majors")
+}
+
+model CollegeStatistic {
+  id        String @id @default(cuid())
+  collegeId String
+  college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  dataYear Int?
+  acceptanceRate Float?
+  avgGpa         Float?
+  satRangeMin    Int?
+  satRangeMax    Int?
+  actRangeMin    Int?
+  actRangeMax    Int?
+  internationalPercentage Float?
+  internationalPopulation Int?
+  graduationRate   Float?
+  undergraduateEnrollment Int?
+
+  isDemoData  Boolean @default(true)
+  dataSource  String?
+  dataSourceUrl String?
+  dataCollectedAt DateTime?
+  verificationStatus DataVerificationStatus @default(DEMO)
+
+  @@index([collegeId, dataYear])
+  @@map("college_statistics")
+}
+
+model ApplicationDeadline {
+  id        String            @id @default(cuid())
+  collegeId String
+  college   College           @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  plan                  ApplicationPlan
+  date                  DateTime?
+  deadlineDescription   String?
+  isPriorityDeadline    Boolean @default(false)
+
+  @@index([collegeId, plan])
+  @@map("application_deadlines")
+}
