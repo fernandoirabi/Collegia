@@ -375,10 +375,6 @@
 }
 
 .resultRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg);
@@ -388,6 +384,19 @@
 .resultRow:hover {
   border-color: var(--color-primary-mid);
   background: var(--color-primary-light);
+}
+
+/* Desktop card (rich/inline). Hidden on mobile. */
+.desktopCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+
+/* Mobile card (compact, progressive disclosure). Visible only on mobile. */
+.mobileCard {
+  display: none;
 }
 
 .resultDot {
@@ -409,6 +418,10 @@
   font-size: 13px;
   color: var(--color-ink-muted);
   margin-top: 2px;
+}
+
+.locPin {
+  vertical-align: -2px;
 }
 
 .resultWhy {
@@ -476,6 +489,10 @@
   gap: 4px;
 }
 
+.saveBtn {
+  padding: 6px 12px;
+}
+
 .saveError {
   font-size: 12px;
   color: var(--color-coral);
@@ -524,6 +541,11 @@
   margin-top: 2px;
 }
 
+/* Compact one-line tier summary, shown only on mobile (fuller desc is desktop-only). */
+.tierShort {
+  display: none;
+}
+
 .tierEmpty {
   font-size: 13px;
   color: var(--color-ink-muted);
@@ -557,6 +579,180 @@
   color: var(--color-green);
 }
 
+/* ============================================================
+   MOBILE CARD (compact, progressive disclosure)
+   ============================================================ */
+.mobileHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.mobileSave {
+  flex-shrink: 0;
+}
+
+.mobileTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.matchScorePill {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-mid);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.mobileReason {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+  margin-top: var(--space-2);
+  padding-left: 10px;
+  position: relative;
+}
+
+.mobileReason::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-primary-mid);
+}
+
+.fitSummary {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.fitLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+
+.fitRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: var(--space-1) 0;
+}
+
+.fitMetric {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-ink-faint);
+  min-width: 30px;
+}
+
+.fitVal {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.fitNote {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  line-height: 1.4;
+}
+
+.fitEmpty {
+  font-size: 12px;
+  color: var(--color-ink-faint);
+  line-height: 1.4;
+}
+
+/* Accordions */
+.accordion {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  margin-top: var(--space-3);
+}
+
+.accordion:first-of-type {
+  margin-top: var(--space-4);
+}
+
+.accordionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  min-height: 44px;
+  text-align: left;
+  border-radius: var(--radius-md);
+}
+
+.accordionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.accordionChevron {
+  color: var(--color-ink-muted);
+  flex-shrink: 0;
+  transition: transform var(--duration-fast) var(--ease);
+}
+
+.accordionChevronOpen {
+  transform: rotate(180deg);
+}
+
+.accordionPanel {
+  overflow: hidden;
+}
+
+.accordionBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 14px 14px;
+}
+
+.accordionText {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+  line-height: 1.55;
+}
+
+/* Mobile View College action */
+.viewCollege {
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--space-4);
+}
+
 /* Footer */
 .stepFooter {
   display: flex;
@@ -573,3 +769,37 @@
   .resultActions { flex-direction: column; }
   .resultActions a { width: 100%; justify-content: center; }
 }
+
+/* ============================================================
+   MOBILE BREAKPOINT — switch from the rich desktop card to the
+   compact progressive-disclosure card.
+   ============================================================ */
+@media (max-width: 768px) {
+  .desktopCard {
+    display: none;
+  }
+
+  .mobileCard {
+    display: block;
+    padding: var(--space-4);
+  }
+
+  /* Compact tier headers: show one-line summary, keep full copy off the viewport. */
+  .tierShort {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-ink-muted);
+    margin-top: 2px;
+  }
+
+  .tierDesc {
+    display: none;
+  }
+
+  /* Keep the results list gap tight so cards feel connected. */
+  .resultsList {
+    gap: var(--space-3);
+  }
+}
+

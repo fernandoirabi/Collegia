@@ -2,13 +2,13 @@
 
 import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
-import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Sparkles, ChevronRight, Check, Plus } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowRight, Sparkles, ChevronRight, Check, Plus, ChevronDown, MapPin } from "lucide-react";
 import Link from "next/link";
 import { getBalancedCollegeListAction } from "@/actions/match-results";
 import { saveCollegeAction } from "@/actions/saved-colleges";
 import { updateStudentPreferencesAction, updateStudentProfileAction } from "@/actions/profile";
-import type { BalancedCollegeListView } from "@/lib/services/college-list-builder.service";
+import type { BalancedCollegeListView, BalancedCollegeListItem } from "@/lib/services/college-list-builder.service";
 import styles from "./page.module.css";
 
 const steps = [
@@ -19,12 +19,12 @@ const steps = [
 ];
 
 const SECTIONS = [
-  { key: "dream", icon: "🔥", label: "Dream", desc: "Ambitious schools worth reaching for — academically above your current profile." },
-  { key: "reach", icon: "⚡", label: "Reach", desc: "Possible but difficult — above your current profile, but not absurdly distant." },
-  { key: "target", icon: "🎯", label: "Target", desc: "Realistic colleges where your profile is reasonably aligned." },
-  { key: "likely", icon: "🛡️", label: "Likely", desc: "Colleges where your current profile is comfortably within or above the reported range." },
-  { key: "safety", icon: "✅", label: "Safety", desc: "Colleges where your academic profile sits clearly above the reported range — kept separate from your primary Target list." },
-  { key: "pathway", icon: "🛤️", label: "Pathway", desc: "Community college / 2-year options — a legitimate step toward a 4-year degree." },
+  { key: "dream", icon: "🔥", label: "Dream", short: "Ambitious schools", desc: "Ambitious schools worth reaching for — academically above your current profile." },
+  { key: "reach", icon: "⚡", label: "Reach", short: "Possible but difficult", desc: "Possible but difficult — above your current profile, but not absurdly distant." },
+  { key: "target", icon: "🎯", label: "Target", short: "Realistic academic range", desc: "Realistic colleges where your profile is reasonably aligned." },
+  { key: "likely", icon: "🛡️", label: "Likely", short: "Comfortably within range", desc: "Colleges where your current profile is comfortably within or above the reported range." },
+  { key: "safety", icon: "✅", label: "Safety", short: "Clearly above reported range", desc: "Colleges where your academic profile sits clearly above the reported range — kept separate from your primary Target list." },
+  { key: "pathway", icon: "🛤️", label: "Pathway", short: "Community college / 2-year", desc: "Community college / 2-year options — a legitimate step toward a 4-year degree." },
 ] as const;
 
 const TIER_STYLE: Record<string, { dot: string; badge: string }> = {
@@ -47,24 +47,66 @@ const LOADING_MESSAGES = [
   "Almost there...",
 ];
 
-function SaveResultButton({
-  collegeId,
-  collegeName,
-  initialSaved,
+function CollapsibleSection({
+  id,
+  title,
+  children,
 }: {
-  collegeId: string;
-  collegeName: string;
-  initialSaved: boolean;
+  id: string;
+  title: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const panelId = `${id}-panel`;
+  return (
+    <div className={styles.accordion}>
+      <button
+        type="button"
+        className={styles.accordionBtn}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className={styles.accordionTitle}>{title}</span>
+        <ChevronDown
+          size={16}
+          className={`${styles.accordionChevron} ${open ? styles.accordionChevronOpen : ""}`}
+        />
+      </button>
+      <div id={panelId} className={styles.accordionPanel} hidden={!open}>
+        <div className={styles.accordionBody}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function SaveIndicator({ saved }: { saved: boolean }) {
+  if (saved) {
+    return (
+      <span className="badge badge-strong" role="status" aria-label="Saved to My College List">
+        <Check size={12} /> Saved
+      </span>
+    );
+  }
+  return null;
+}
+
+function ResultCard({
+  r,
+  style,
+}: {
+  r: BalancedCollegeListItem;
+  style: { dot: string; badge: string };
 }) {
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(initialSaved);
+  const [saved, setSaved] = useState(r.saved);
   const [failed, setFailed] = useState(false);
 
   const save = async () => {
     if (saving || saved) return;
     setSaving(true);
     setFailed(false);
-    const res = await saveCollegeAction({ collegeId });
+    const res = await saveCollegeAction({ collegeId: r.college.id });
     setSaving(false);
     if (res.ok) {
       setSaved(true);
@@ -73,32 +115,203 @@ function SaveResultButton({
     }
   };
 
-  if (saved) {
-    return (
-      <span className="badge badge-strong" role="status" aria-label="Saved to My College List">
-        <Check size={12} /> Saved
+  // Single save button rendered in both the mobile and desktop variants so
+  // the saved state stays in sync no matter which layout is visible.
+  const saveButton = (compact: boolean) =>
+    saved ? (
+      <SaveIndicator saved />
+    ) : (
+      <span className={styles.saveWrap}>
+        <button
+          className={`btn btn-secondary btn-sm ${compact ? styles.saveBtn : ""}`}
+          onClick={save}
+          disabled={saving}
+          aria-busy={saving}
+          aria-label={`Save ${r.college.name} to My College List`}
+        >
+          <Plus size={14} />
+          {saving ? "Saving..." : compact ? "Save" : "Save to My College List"}
+        </button>
+        {failed && (
+          <span className={styles.saveError} role="alert">
+            Couldn&apos;t save this college. Try again.
+          </span>
+        )}
       </span>
     );
-  }
 
   return (
-    <span className={styles.saveWrap}>
-      <button
-        className="btn btn-secondary btn-sm"
-        onClick={save}
-        disabled={saving}
-        aria-busy={saving}
-        aria-label={`Save ${collegeName} to My College List`}
-      >
-        <Plus size={14} />
-        {saving ? "Saving..." : "Save to My College List"}
-      </button>
-      {failed && (
-        <span className={styles.saveError} role="alert">
-          Couldn&apos;t save this college. Try again.
-        </span>
-      )}
-    </span>
+    <div className={styles.resultRow}>
+      {/* ===== MOBILE CARD ===== */}
+      <div className={styles.mobileCard}>
+        <div className={styles.mobileHeader}>
+          <Link href={`/college/${r.college.slug}`} className={styles.resultSchool}>
+            {r.college.name}
+          </Link>
+          <span className={styles.mobileSave}>{saveButton(true)}</span>
+        </div>
+
+        <p className={styles.resultLocation}>
+          <MapPin size={12} className={styles.locPin} /> {r.college.location.city},{" "}
+          {r.college.location.state}
+        </p>
+
+        <div className={styles.mobileTags}>
+          <span className={`badge ${style.badge}`}>{r.classificationLabel}</span>
+          <span className={styles.matchScorePill}>{r.matchScore} Collegia Match</span>
+        </div>
+
+        {r.reasons.slice(0, 2).map((reason, i) => (
+          <p key={i} className={styles.mobileReason}>
+            {reason}
+          </p>
+        ))}
+
+        <div className={styles.fitSummary}>
+          <p className={styles.fitLabel}>Academic fit</p>
+          {r.academicReality.gpa.available && r.academicReality.gpa.studentGpa != null && (
+            <div className={styles.fitRow}>
+              <span className={styles.fitMetric}>GPA</span>
+              <span className={styles.fitVal}>{r.academicReality.gpa.studentGpa.toFixed(2)}</span>
+              <span className={styles.fitNote}>
+                {r.academicReality.gpa.label}
+                {r.academicReality.gpa.collegeGpa != null
+                  ? ` · avg ${r.academicReality.gpa.collegeGpa.toFixed(2)}`
+                  : ""}
+              </span>
+            </div>
+          )}
+          {r.academicReality.sat.available && r.academicReality.sat.studentSat != null && (
+            <div className={styles.fitRow}>
+              <span className={styles.fitMetric}>SAT</span>
+              <span className={styles.fitVal}>{r.academicReality.sat.studentSat}</span>
+              <span className={styles.fitNote}>
+                {r.academicReality.sat.label}
+                {r.academicReality.sat.satRangeMin != null &&
+                r.academicReality.sat.satRangeMax != null
+                  ? ` · ${r.academicReality.sat.satRangeMin}–${r.academicReality.sat.satRangeMax}`
+                  : ""}
+              </span>
+            </div>
+          )}
+          {r.academicReality.act.available && r.academicReality.act.studentAct != null && (
+            <div className={styles.fitRow}>
+              <span className={styles.fitMetric}>ACT</span>
+              <span className={styles.fitVal}>{r.academicReality.act.studentAct}</span>
+              <span className={styles.fitNote}>
+                {r.academicReality.act.label}
+                {r.academicReality.act.actRangeMin != null &&
+                r.academicReality.act.actRangeMax != null
+                  ? ` · ${r.academicReality.act.actRangeMin}–${r.academicReality.act.actRangeMax}`
+                  : ""}
+              </span>
+            </div>
+          )}
+          {!r.academicReality.gpa.available &&
+            !r.academicReality.sat.available &&
+            !r.academicReality.act.available && (
+              <p className={styles.fitEmpty}>Insufficient academic data.</p>
+            )}
+        </div>
+
+        <CollapsibleSection id={`${r.college.id}-why`} title="Why It Matches">
+          <p className={styles.accordionText}>{r.reasons.join(" ")}</p>
+        </CollapsibleSection>
+
+        {r.academicReality.message && (
+          <CollapsibleSection id={`${r.college.id}-academic`} title="Academic Fit">
+            <span className={styles.academicTag}>{r.academicPositionLabel}</span>
+            <p className={styles.accordionText}>{r.academicReality.message}</p>
+          </CollapsibleSection>
+        )}
+
+        {(r.pathwayNote || r.safetyNote) && (
+          <CollapsibleSection
+            id={`${r.college.id}-note`}
+            title={r.pathwayNote ? "Pathway" : "Safety Note"}
+          >
+            <p className={styles.accordionText}>{r.pathwayNote || r.safetyNote}</p>
+          </CollapsibleSection>
+        )}
+
+        {r.mainRisk && (
+          <CollapsibleSection id={`${r.college.id}-risk`} title="Main Risk">
+            <p className={styles.accordionText}>
+              <span className={styles.riskLabel}>Main risk:</span> {r.mainRisk}
+            </p>
+          </CollapsibleSection>
+        )}
+
+        {r.improvements.length > 0 && (
+          <CollapsibleSection id={`${r.college.id}-improve`} title="What to Improve">
+            {r.improvements.map((im) => (
+              <p key={im.title} className={styles.improveAction}>
+                {im.action}
+                {im.potentialImpact > 0 && (
+                  <span className={styles.improveImpact}>
+                    {" "}
+                    (up to +{Math.round(im.potentialImpact)} Collegia Match)
+                  </span>
+                )}
+              </p>
+            ))}
+          </CollapsibleSection>
+        )}
+
+        <Link href={`/college/${r.college.slug}`} className={`btn btn-primary btn-sm ${styles.viewCollege}`}>
+          View College
+          <ArrowRight size={14} />
+        </Link>
+      </div>
+
+      {/* ===== DESKTOP CARD ===== */}
+      <div className={styles.desktopCard}>
+        <div className={styles.resultDot} style={{ background: style.dot }} />
+        <div className={styles.resultInfo}>
+          <Link href={`/college/${r.college.slug}`} className={styles.resultSchool}>
+            {r.college.name}
+          </Link>
+          <p className={styles.resultLocation}>
+            {r.college.location.city}, {r.college.location.state}
+          </p>
+          <p className={styles.resultWhy}>{r.reasons.join(" ")}</p>
+          {r.academicReality.message && (
+            <p className={styles.academicReality}>
+              <span className={styles.academicTag}>{r.academicPositionLabel}</span>{" "}
+              {r.academicReality.message}
+            </p>
+          )}
+          {r.pathwayNote && <p className={styles.pathwayNote}>{r.pathwayNote}</p>}
+          {r.safetyNote && <p className={styles.pathwayNote}>{r.safetyNote}</p>}
+          {r.mainRisk && (
+            <p className={styles.mainRisk}>
+              <span className={styles.riskLabel}>Main risk:</span> {r.mainRisk}
+            </p>
+          )}
+          {r.improvements.length > 0 && (
+            <div className={styles.improve}>
+              <p className={styles.improveTitle}>What to improve</p>
+              {r.improvements.map((im) => (
+                <p key={im.title} className={styles.improveAction}>
+                  {im.action}
+                  {im.potentialImpact > 0 && (
+                    <span className={styles.improveImpact}>
+                      {" "}
+                      (up to +{Math.round(im.potentialImpact)} Collegia Match)
+                    </span>
+                  )}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className={styles.resultRight}>
+          <span className={`badge ${style.badge}`}>{r.classificationLabel}</span>
+          <span className={styles.resultAccept}>{r.matchScore} Collegia Match</span>
+          {saveButton(false)}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -446,6 +659,7 @@ export default function MatchPage() {
                                 {section.icon} {section.label.toUpperCase()}
                               </h3>
                               <p className={styles.tierDesc}>{section.desc}</p>
+                              <p className={styles.tierShort}>{section.short}</p>
                             </div>
                             <p className={styles.tierEmpty} role="note">
                               We couldn&apos;t honestly fill this tier with your current profile, so
@@ -462,63 +676,11 @@ export default function MatchPage() {
                               {section.icon} {section.label.toUpperCase()}
                             </h3>
                             <p className={styles.tierDesc}>{section.desc}</p>
+                            <p className={styles.tierShort}>{section.short}</p>
                           </div>
                           <div className={styles.resultsList}>
                             {items.map((r) => (
-                              <div key={r.college.id} className={styles.resultRow}>
-                                <div className={styles.resultDot} style={{background: style.dot}} />
-                                <div className={styles.resultInfo}>
-                                  <Link href={`/college/${r.college.slug}`} className={styles.resultSchool}>
-                                    {r.college.name}
-                                  </Link>
-                                  <p className={styles.resultLocation}>
-                                    {r.college.location.city}, {r.college.location.state}
-                                  </p>
-                                  <p className={styles.resultWhy}>{r.reasons.join(" ")}</p>
-                                  {r.academicReality.message && (
-                                    <p className={styles.academicReality}>
-                                      <span className={styles.academicTag}>{r.academicPositionLabel}</span>{" "}
-                                      {r.academicReality.message}
-                                    </p>
-                                  )}
-                                  {r.pathwayNote && (
-                                    <p className={styles.pathwayNote}>{r.pathwayNote}</p>
-                                  )}
-                                  {r.safetyNote && (
-                                    <p className={styles.pathwayNote}>{r.safetyNote}</p>
-                                  )}
-                                  {r.mainRisk && (
-                                    <p className={styles.mainRisk}>
-                                      <span className={styles.riskLabel}>Main risk:</span> {r.mainRisk}
-                                    </p>
-                                  )}
-                                  {r.improvements.length > 0 && (
-                                    <div className={styles.improve}>
-                                      <p className={styles.improveTitle}>What to improve</p>
-                                      {r.improvements.map((im) => (
-                                        <p key={im.title} className={styles.improveAction}>
-                                          {im.action}
-                                          {im.potentialImpact > 0 && (
-                                            <span className={styles.improveImpact}>
-                                              {" "}
-                                              (up to +{Math.round(im.potentialImpact)} Collegia Match)
-                                            </span>
-                                          )}
-                                        </p>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className={styles.resultRight}>
-                                  <span className={`badge ${style.badge}`}>{r.classificationLabel}</span>
-                                  <span className={styles.resultAccept}>{r.matchScore} Collegia Match</span>
-                                  <SaveResultButton
-                                    collegeId={r.college.id}
-                                    collegeName={r.college.name}
-                                    initialSaved={r.saved}
-                                  />
-                                </div>
-                              </div>
+                              <ResultCard key={r.college.id} r={r} style={style} />
                             ))}
                           </div>
                         </section>
