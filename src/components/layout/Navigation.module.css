@@ -87,6 +87,19 @@
   position: relative;
 }
 
+/* Invisible hover bridge: the dropdown is offset below the trigger by 8px,
+   which would otherwise create a hover dead zone where the dropdown closes
+   while the pointer crosses from the trigger into the menu. This pseudo-element
+   fills that gap so the dropdown stays open during the transition. */
+.navItem::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: -12px;
+  width: 248px;
+  height: 8px;
+}
+
 .navLink {
   display: flex;
   align-items: center;

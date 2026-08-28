@@ -86,6 +86,8 @@ export default function Navigation() {
                 className={styles.navItem}
                 onMouseEnter={() => setActiveDropdown(item.label)}
                 onMouseLeave={() => setActiveDropdown(null)}
+                onFocus={() => setActiveDropdown(item.label)}
+                onBlur={() => setActiveDropdown(null)}
                 role="menuitem"
               >
                 <Link

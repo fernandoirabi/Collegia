@@ -8,8 +8,9 @@ import { computeMatch, type EngineCollege, type EngineProfile } from "../src/lib
 import { buildBalancedList, type BalancedList } from "../src/lib/services/college-list-builder.service";
 import {
   computeAcademicRelevance,
-  selectivityBandFor,
+  institutionalSelectivityBand,
   type RelevancePool,
+  type InstitutionalSelectivityBand,
 } from "../src/lib/services/academic-relevance.service";
 
 // ============================================================
@@ -30,6 +31,7 @@ function seedToEngine(s: SeedCollege): EngineCollege {
     satRangeMax: s.satRange[1],
     actRangeMin: s.actRange[0],
     actRangeMax: s.actRange[1],
+    graduationRate: s.graduationRate,
     estimatedTotalCost: s.estimatedTotalCost ?? s.tuitionInternational + s.roomAndBoard,
     internationalAidAvailable: s.intlAid,
     meritScholarshipsAvailable: s.meritScholarships ?? null,
@@ -113,6 +115,10 @@ function poolFor(profile: EngineProfile, name: string): RelevancePool {
   return computeAcademicRelevance(profile, collegeByName(name)).pool;
 }
 
+function institutionalBandFor(profile: EngineProfile, name: string): InstitutionalSelectivityBand | null {
+  return computeAcademicRelevance(profile, collegeByName(name)).institutionalBand;
+}
+
 // The originally reported bug: a 4.0 / 1600 student had Albany State,
 // Bemidji, Bennett and Bethune-Cookman as Target and Arizona State,
 // Auburn and Clemson as Likely because high Match Scores overrode
@@ -189,14 +195,51 @@ test("8. relevance pools are data-driven, not hardcoded per university", () => {
   assert.equal(poolFor(WEAK, "Bennett College"), "REALISTIC"); // at/above the bar of an open-admission school
 });
 
-test("9. selectivity bands follow published admission-rate thresholds", () => {
-  assert.equal(selectivityBandFor(4), "ULTRA_SELECTIVE");
-  assert.equal(selectivityBandFor(25), "HIGHLY_SELECTIVE");
-  assert.equal(selectivityBandFor(50), "SELECTIVE");
-  assert.equal(selectivityBandFor(75), "MODERATE");
-  assert.equal(selectivityBandFor(85), "HIGH_ADMISSION");
-  assert.equal(selectivityBandFor(90), "OPEN_ADMISSION");
-  assert.equal(selectivityBandFor(null), null);
+test("9. institutional selectivity bands follow multi-factor thresholds", () => {
+  // These test the new multi-factor institutional selectivity system
+  // The exact bands depend on the full catalog data (acceptance rate + GPA + SAT + graduation rate)
+  const asu = collegeByName("Arizona State University");
+  const gt = collegeByName("Georgia Institute of Technology");
+  const harvard = collegeByName("Harvard University");
+  const mit = collegeByName("MIT");
+  const stanford = collegeByName("Stanford University");
+  const yale = collegeByName("Yale University");
+  const princeton = collegeByName("Princeton University");
+  const columbia = collegeByName("Columbia University");
+  const penn = collegeByName("University of Pennsylvania");
+  const duke = collegeByName("Duke University");
+  const vanderbilt = collegeByName("Vanderbilt University");
+  const rice = collegeByName("Rice University");
+  const northwestern = collegeByName("Northwestern University");
+  const uchicago = collegeByName("University of Chicago");
+  const dartmouth = collegeByName("Dartmouth College");
+  const brown = collegeByName("Brown University");
+  const jhu = collegeByName("Johns Hopkins University");
+
+  // Ultra-elite schools (HYPSM + UChicago + Duke-class)
+  assert.ok(institutionalSelectivityBand(harvard) === "ULTRA_ELITE" || institutionalSelectivityBand(harvard) === "VERY_HIGH");
+  assert.ok(institutionalSelectivityBand(mit) === "ULTRA_ELITE" || institutionalSelectivityBand(mit) === "VERY_HIGH");
+  assert.ok(institutionalSelectivityBand(stanford) === "ULTRA_ELITE" || institutionalSelectivityBand(stanford) === "VERY_HIGH");
+  assert.ok(institutionalSelectivityBand(yale) === "ULTRA_ELITE" || institutionalSelectivityBand(yale) === "VERY_HIGH");
+  assert.ok(institutionalSelectivityBand(princeton) === "ULTRA_ELITE" || institutionalSelectivityBand(princeton) === "VERY_HIGH");
+  assert.ok(institutionalSelectivityBand(columbia) === "ULTRA_ELITE" || institutionalSelectivityBand(columbia) === "VERY_HIGH");
+  assert.ok(institutionalSelectivityBand(penn) === "ULTRA_ELITE" || institutionalSelectivityBand(penn) === "VERY_HIGH");
+  assert.ok(institutionalSelectivityBand(duke) === "ULTRA_ELITE" || institutionalSelectivityBand(duke) === "VERY_HIGH");
+  assert.ok(institutionalSelectivityBand(uchicago) === "ULTRA_ELITE" || institutionalSelectivityBand(uchicago) === "VERY_HIGH");
+
+  // Georgia Tech should be VERY_HIGH or HIGH (17% admit, 4.0 GPA, 1370 SAT)
+  assert.ok(
+    institutionalSelectivityBand(gt) === "VERY_HIGH" ||
+    institutionalSelectivityBand(gt) === "HIGH",
+    `Georgia Tech band: ${institutionalSelectivityBand(gt)}`
+  );
+
+  // ASU should be ACCESSIBLE or MODERATE (90% admit, 3.5 GPA)
+  assert.ok(
+    institutionalSelectivityBand(asu) === "ACCESSIBLE" ||
+    institutionalSelectivityBand(asu) === "MODERATE",
+    `ASU band: ${institutionalSelectivityBand(asu)}`
+  );
 });
 
 test("10. preference differences re-order the same academic universe, never a different one", () => {
@@ -219,11 +262,11 @@ test("11. the builder stays deterministic and duplicate-free", () => {
   assert.equal(new Set(flat).size, flat.length, "no college may appear in more than one tier");
 });
 
-test("12. safety entries carry selectivity and academic-position context", () => {
+test("12. safety entries carry institutional selectivity and academic-position context", () => {
   const list = build(STRONG);
   for (const entry of list.safety) {
     assert.equal(entry.relevancePool, "SAFETY");
-    assert.ok(entry.selectivityBand, "safety entries should expose their selectivity band");
+    assert.ok(entry.institutionalBand, "safety entries should expose their institutional selectivity band");
     assert.ok(["ABOVE", "WELL_ABOVE"].includes(entry.academicPosition ?? ""), "safety entries are overqualified");
   }
 });

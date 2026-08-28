@@ -1,4 +1,4 @@
-import type { College, Article, StudentProfile, JourneyStep, Goal } from "@/types";
+﻿import type { College, StudentProfile, JourneyStep, Goal } from "@/types";
 
 // ============================================================
 // MOCK COLLEGES
@@ -301,84 +301,6 @@ export const colleges: College[] = [
 ];
 
 // ============================================================
-// MOCK ARTICLES
-// ============================================================
-export const articles: Article[] = [
-  {
-    id: "1",
-    slug: "how-to-build-your-college-list",
-    title: "How to Build Your College List as an International Student",
-    excerpt:
-      "Building a balanced college list is one of the most strategic parts of the college application process. Here's how to do it right.",
-    category: "How to Apply",
-    readTime: 8,
-    image: "/images/hero_campus.jpg",
-    publishDate: "2026-08-10",
-    featured: true,
-  },
-  {
-    id: "2",
-    slug: "understanding-financial-aid-international",
-    title: "Understanding Financial Aid as an International Student",
-    excerpt:
-      "Financial aid for international students is limited but not impossible. Learn where to look, what to ask, and how to maximize your opportunities.",
-    category: "Financial Aid",
-    readTime: 10,
-    image: "/images/problem_student.jpg",
-    publishDate: "2026-08-05",
-    featured: true,
-  },
-  {
-    id: "3",
-    slug: "common-app-international-guide",
-    title: "The International Student's Complete Guide to Common App",
-    excerpt:
-      "Common App can be confusing for international students. Here's a step-by-step breakdown of everything you need to know.",
-    category: "International Students",
-    readTime: 12,
-    image: "/images/campus_nyc.jpg",
-    publishDate: "2026-07-28",
-    featured: true,
-  },
-  {
-    id: "4",
-    slug: "writing-a-strong-college-essay",
-    title: "How to Write a College Essay That Stands Out",
-    excerpt:
-      "Your personal statement is your chance to speak directly to the admissions committee. Here's how to write one that makes them remember you.",
-    category: "Essays",
-    readTime: 9,
-    image: "/images/campus_california.jpg",
-    publishDate: "2026-07-20",
-    featured: true,
-  },
-  {
-    id: "5",
-    slug: "stem-majors-international-students",
-    title: "Best STEM Programs for International Students in the US",
-    excerpt:
-      "STEM fields offer excellent opportunities for international students, including OPT extensions. Here are the top programs to consider.",
-    category: "International Students",
-    readTime: 7,
-    image: "/images/campus_boston.jpg",
-    publishDate: "2026-07-15",
-    featured: false,
-  },
-  {
-    id: "6",
-    slug: "f1-visa-guide",
-    title: "The F-1 Student Visa: Everything You Need to Know",
-    excerpt:
-      "Your F-1 visa is your gateway to studying in the US. Here's a comprehensive guide to the application process, requirements, and what to expect.",
-    category: "International Students",
-    readTime: 11,
-    image: "/images/campus_florida.jpg",
-    publishDate: "2026-07-10",
-    featured: false,
-  },
-];
-
-// ============================================================
 // MOCK STUDENT PROFILE
 // ============================================================
 export const demoStudent: StudentProfile = {
@@ -414,7 +336,7 @@ export const demoGoals: Goal[] = [
   {
     id: "1",
     title: "Reach 1400 SAT",
-    description: "Focus on Math section — aim for 750+ to boost your score significantly.",
+    description: "Focus on Math section â€” aim for 750+ to boost your score significantly.",
     current: 1320,
     target: 1400,
     unit: "points",
@@ -456,7 +378,7 @@ export const locationOptions = [
 ];
 
 export const costRanges = [
-  "Under $20K", "$20K–$35K", "$35K–$50K", "$50K–$65K", "$65K+",
+  "Under $20K", "$20Kâ€“$35K", "$35Kâ€“$50K", "$50Kâ€“$65K", "$65K+",
 ];
 
-export const campusSizes = ["Small (Under 5K)", "Medium (5K–15K)", "Large (15K+)"];
+export const campusSizes = ["Small (Under 5K)", "Medium (5Kâ€“15K)", "Large (15K+)"];

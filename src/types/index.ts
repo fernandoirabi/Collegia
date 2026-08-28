@@ -79,18 +79,6 @@ export interface CollegeMatch extends College {
   matchReasons: string[];
 }
 
-export interface Article {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string;
-  category: "How to Apply" | "Financial Aid" | "Essays" | "International Students";
-  readTime: number;
-  image: string;
-  publishDate: string;
-  featured: boolean;
-}
-
 export interface JourneyStep {
   id: string;
   title: string;

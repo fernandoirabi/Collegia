@@ -1,0 +1,102 @@
+/* Financial Aid — Sticker Price → Net Cost visual */
+
+.calcSection {
+  margin-top: var(--space-16);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-10);
+}
+
+.calcHeader {
+  margin-bottom: var(--space-8);
+}
+
+.calcTitle {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  color: var(--color-ink);
+  margin-bottom: var(--space-2);
+}
+
+.calcLead {
+  font-size: 15px;
+  color: var(--color-ink-muted);
+  max-width: 560px;
+}
+
+.calcFlow {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.calcBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1 1 200px;
+  min-width: 200px;
+}
+
+.calcCard {
+  width: 100%;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+}
+
+.calcLabel {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.calcNote {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.calcDesc {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+
+.calcArrow {
+  color: var(--color-primary);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.calcFootnote {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border-light);
+  font-size: 14px;
+  color: var(--color-ink-muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .calcSection {
+    padding: var(--space-6);
+  }
+  .calcBlock {
+    min-width: 100%;
+  }
+  .calcArrow {
+    transform: rotate(90deg);
+  }
+}

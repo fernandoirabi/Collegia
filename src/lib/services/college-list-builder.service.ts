@@ -11,42 +11,37 @@
 // FIT measure and can be high even when the student is academically
 // over- or under-qualified for a college. This module therefore runs
 // an academic-relevance gate (see academic-relevance.service.ts)
-// BEFORE any personal-fit ranking: relevance decides whether a
-// college belongs in the pool at all, and fit only decides the
-// ordering within that pool. A dramatically weaker school is moved
-// into the explicit Safety tier (or dropped) even when its fit score
-// is 90+; a dramatically harder school is moved into Dream/Reach even
-// when its fit score is high. The frozen Match Engine is untouched.
+// BEFORE any personal-fit ranking: the institution's data-driven
+// selectivity band is combined with the student's academic position
+// into one honest ambition tier, and fit only decides the ORDERING
+// within that tier. A dramatically weaker school is moved into the
+// explicit Safety tier (or dropped); a dramatically harder school is
+// moved into Dream/Reach even when its fit score is high. The frozen
+// Match Engine is untouched.
 //
 // Tiers:
-//   Dream    — ambitious schools: academically elite colleges with
-//              ultra-low acceptance (top-elite tier), colleges where
-//              the student sits clearly below the published bar, or
-//              colleges flagged by the academic realism gate.
-//   Reach    — possible but difficult: highly selective institutions
-//              (admission rate at or below 25%) even when the student
-//              is academically competitive, plus colleges where the
-//              student sits below or at the published bar.
-//   Target   — realistic academic range: the student is at the
-//              edge of or inside the college's reported range
-//              (NEAR_RANGE / WITHIN_RANGE) and admission is not
-//              highly selective.
-//   Likely   — the student's current profile is comfortably above the
-//              college's reported range, with reasonable major /
-//              financial / international compatibility, and the
-//              college is not dramatically below the student's own
-//              profile. For weak profiles, open-admission 4-year
-//              institutions (85%+ admission rate) fill this tier
-//              honestly.
+//   Dream    — a genuine stretch: top-elite institutions (ultra-low
+//              acceptance + elite academic bar), or institutions the
+//              student sits far below the bar of.
+//   Reach    — possible but difficult: very highly selective
+//              institutions, or institutions where the student sits
+//              below the published bar.
+//   Target   — realistic academic range: the student sits at or near
+//              the college's reported bar and admission is competitive.
+//   Likely   — comfortable: the student sits above a selective or
+//              accessible institution's reported bar.
 //   Safety   — an explicit, separated tier for colleges where the
-//              student's academics are clearly ABOVE the reported
-//              range and admission is demonstrably non-selective
-//              (published rate >= 40%). It is never mixed into the
-//              primary Target/Likely tiers.
+//              student's academics are clearly ABOVE the reported bar
+//              of a moderate/accessible institution. It is never
+//              mixed into the primary Target/Likely tiers.
 //   Pathway  — community college / 2-year options, surfaced when
 //              the student's profile is below the normal range of
 //              most 4-year institutions, framed as a legitimate
 //              transfer pathway (not a punishment).
+//
+// The tier is academic only. Preferences (major, budget, region,
+// etc.) never change a tier — they only re-order the colleges within
+// an already-assigned tier.
 //
 // Deterministic: same profile + same catalog => same list.
 // A Collegia Match score is a FIT measure, never a probability,
@@ -69,19 +64,19 @@ import { analyzeProfileGaps, potentialImpactForGap, type GapFinding } from "@/li
 import {
   computeAcademicDistance,
   computeAcademicPositionScore,
-  selectivityAdmissionMessage,
-  selectivityLabel,
   type AcademicDistance,
   type AcademicPositionBand,
 } from "@/lib/services/academic-distance.service";
 import {
   computeAcademicRelevance,
   isPathwayCollege,
-  SELECTIVITY_BAND_LABELS,
+  explainTier,
+  INSTITUTIONAL_BAND_LABELS,
   type AcademicPosition,
   type AcademicRelevance,
   type RelevancePool,
-  type SelectivityBand,
+  type InstitutionalSelectivityBand,
+  type AmbitionTier,
 } from "@/lib/services/academic-relevance.service";
 import type { College } from "@/types";
 import type { MatchClassification } from "@prisma/client";
@@ -133,43 +128,6 @@ const WEAK_COUNTS: Record<ListTierKey, number> = {
   pathway: 2,
 };
 
-// A college is considered academically elite (a dream for almost
-// anyone) when its published academic profile clears these bars.
-const ELITE_AVG_GPA = 3.9;
-const ELITE_SAT_MIN = 1450;
-
-// Selectivity-aware tiering (shared with academic-relevance.service):
-//   ULTRA_SELECTIVE_RATE — an elite college admitting 7% or fewer is
-//                           a Dream for any strong student.
-//   HIGHLY_SELECTIVE_RATE — institutions admitting at or below 25% are
-//                           ambitious: eligible for Dream/Reach, never
-//                           Likely, even when the student's academics
-//                           are excellent.
-//   OPEN_ADMISSION_RATE   — 4-year colleges admitting 85%+ give weak
-//                           profiles an honest Likely tier.
-//   SAFETY_RATE           — colleges admitting 40%+ where the student
-//                           sits clearly above the bar become an
-//                           explicit Safety tier, never a primary
-//                           Target/Likely.
-const OPEN_ADMISSION_RATE = 85;
-const SAFETY_RATE = 40;
-
-// Likely relevance caps: a college is only a Likely when it is not
-// dramatically below the student's own reported profile. Without
-// this, an elite student's Likely tier would be padded with schools
-// far beneath their academic level.
-const LIKELY_MAX_GPA_GAP = 1.0;
-const LIKELY_MAX_SAT_GAP = 400;
-
-// Academic position thresholds (position is in [-1, 1]).
-const DOMINANT_POSITION = 0.15; // student clearly above the college's bar
-const LIKELY_MIN_SCORE = 65;
-const LIKELY_MIN_MAJOR = 55;
-const LIKELY_MIN_FINANCIAL = 55;
-const LIKELY_MIN_INTERNATIONAL = 55;
-const TARGET_MIN_SCORE = 60;
-const REACH_MIN_SCORE = 55;
-
 // A profile this weak is below the reported bar of most 4-year
 // institutions, so the Pathway tier (community college / transfer)
 // is surfaced as a legitimate strategic option.
@@ -215,74 +173,6 @@ interface Tagged {
   relevance: AcademicRelevance;
 }
 
-function isElite(college: EngineCollege): boolean {
-  if (college.avgGpa == null || college.satRangeMin == null) return false;
-  return college.avgGpa >= ELITE_AVG_GPA && college.satRangeMin >= ELITE_SAT_MIN;
-}
-
-// A college belongs in the ambitious (Dream) bucket when it is
-// academically elite AND ultra-selective (7% or lower admission), or
-// when the academic realism gate flags a dramatic mismatch. A college
-// where the student is merely "below the range" (but not dramatically
-// so) stays in the realistic tiers. The gate is what stops a high
-// overall Match Score from turning an unrealistic school into a
-// "Target".
-function isDreamCandidate(t: Tagged): boolean {
-  const rate = t.college.acceptanceRate ?? null;
-  return (
-    t.academic.isAcademicMismatch ||
-    (isElite(t.college) && (rate == null || rate <= 7))
-  );
-}
-
-function dimensionScore(t: Tagged, dimension: string): number | null {
-  const dim = t.result.dimensions.find((d) => d.dimension === dimension);
-  return dim ? dim.score : null;
-}
-
-function isLikelyCandidate(t: Tagged, profile: EngineProfile): boolean {
-  // The relevance pool already blocked overqualified safeties and
-  // dramatic mismatches from this path.
-  if (t.relevance.pool === "SAFETY" || t.relevance.pool === "AMBITIOUS") return false;
-
-  const major = dimensionScore(t, "major");
-  const financial = dimensionScore(t, "financial");
-  if (major == null || major < LIKELY_MIN_MAJOR) return false;
-  if (financial == null || financial < LIKELY_MIN_FINANCIAL) return false;
-  if (profile.isInternationalStudent) {
-    const international = dimensionScore(t, "international");
-    if (international == null || international < LIKELY_MIN_INTERNATIONAL) return false;
-  }
-
-  const rate = t.college.acceptanceRate ?? null;
-
-  // Open-admission path: an 85%+ 4-year college is a realistic Likely
-  // for a weak profile (the student sits below most colleges' bars, so
-  // the normal dominant-position path would never fire). Gated on the
-  // student NOT being above the college's bar, so an elite student
-  // cannot claim a dramatically weaker open-admission school here.
-  if (
-    rate != null &&
-    rate >= OPEN_ADMISSION_RATE &&
-    t.position <= DOMINANT_POSITION &&
-    t.result.score >= LIKELY_MIN_SCORE
-  ) {
-    return true;
-  }
-
-  // Normal path: the student must be comfortably dominant academically.
-  if (t.position <= DOMINANT_POSITION) return false;
-  if (t.result.score < LIKELY_MIN_SCORE) return false;
-
-  // Relevance caps: the college must not sit dramatically below the
-  // student's own reported academic profile.
-  const gpaGap = t.academic.gpa.gpaGap ?? null;
-  const satGap = t.academic.sat.satGap ?? null;
-  if (gpaGap != null && gpaGap > LIKELY_MAX_GPA_GAP) return false;
-  if (satGap != null && satGap > LIKELY_MAX_SAT_GAP) return false;
-  return true;
-}
-
 type TierBucket = ListTierKey | null;
 
 // List sizes adapt to profile strength: a strong student gets a
@@ -297,42 +187,15 @@ function defaultCountsFor(profile: EngineProfile): Record<ListTierKey, number> {
 }
 
 // Assign a single honest tier to a college for the given profile.
-// The academic-relevance layer decides the pool FIRST (relevance);
-// the per-dimension fit only decides the ordering within that pool.
-// A college is never shown as Target/Likely when the student is
-// over- or under-qualified for it.
-function classifyTier(t: Tagged, profile: EngineProfile, pathwayEnabled: boolean): TierBucket {
+// The academic-relevance layer decides the tier FIRST (the decision
+// matrix); the per-dimension fit only decides the ordering within
+// that tier. A college is never shown as Target/Likely when the
+// student is over- or under-qualified for it.
+function classifyTier(t: Tagged, pathwayEnabled: boolean): TierBucket {
   if (isPathwayCollege(t.college)) {
     return pathwayEnabled ? "pathway" : null;
   }
-  if (isDreamCandidate(t)) return "dream";
-
-  const rel = t.relevance;
-
-  // Overqualified: the student sits clearly above the college's range
-  // at a demonstrably non-selective institution. Surfaced as an
-  // explicit Safety tier, never as a primary Target/Likely.
-  if (rel.pool === "SAFETY") return "safety";
-
-  if (isLikelyCandidate(t, profile)) return "likely";
-
-  // A genuine reach: below/at the bar of a highly selective school, or
-  // flagged as ambitious by the relevance gate.
-  if (rel.pool === "AMBITIOUS") {
-    return t.result.score >= REACH_MIN_SCORE ? "reach" : null;
-  }
-
-  const position = rel.position;
-
-  if (position === "BELOW") {
-    return t.result.score >= REACH_MIN_SCORE ? "reach" : null;
-  }
-  if (position === "NEAR" || position === "MATCH") {
-    return t.result.score >= TARGET_MIN_SCORE ? "target" : null;
-  }
-  // ABOVE / WELL_ABOVE but failed the likely fit checks: still a
-  // realistic option, presented honestly as a Target.
-  return t.result.score >= TARGET_MIN_SCORE ? "target" : null;
+  return t.relevance.tier;
 }
 
 // ============================================================
@@ -482,10 +345,11 @@ export interface BalancedListEntry {
   academic: AcademicDistance;
   /** Coarse academic position used by the interpretation layer. */
   academicPosition: AcademicPosition | null;
-  /** Selectivity band derived from the published acceptance rate. */
-  selectivityBand: SelectivityBand | null;
-  selectivityBandLabel: string;
-  /** Which relevance pool placed this college in this tier. */
+  /** Institutional selectivity band derived from published data. */
+  institutionalBand: InstitutionalSelectivityBand | null;
+  institutionalBandLabel: string;
+  institutionalIndex: number;
+  /** Which ambition tier placed this college here. */
   relevancePool: RelevancePool;
   mainRisk: string;
   safetyNote?: string;
@@ -551,7 +415,7 @@ export function buildBalancedList(
     pathway: [],
   };
   for (const t of tagged) {
-    const tier = classifyTier(t, profile, pathwayEnabled);
+    const tier = classifyTier(t, pathwayEnabled);
     if (tier) buckets[tier].push(t);
   }
 
@@ -573,12 +437,11 @@ export function buildBalancedList(
       academicPositionLabel: tier === "pathway" ? "Community College / Transfer Pathway" : t.academic.combinedLabel,
       academic: t.academic,
       academicPosition: t.relevance.position,
-      selectivityBand: t.relevance.selectivityBand,
-      selectivityBandLabel: t.relevance.selectivityBand
-        ? SELECTIVITY_BAND_LABELS[t.relevance.selectivityBand]
-        : "Unknown",
+      institutionalBand: t.relevance.institutionalBand,
+      institutionalBandLabel: t.relevance.institutionalBandLabel,
+      institutionalIndex: t.relevance.institutionalIndex,
       relevancePool: t.relevance.pool,
-      mainRisk: tier === "pathway" ? pathwayMainRisk(t.college) : mainRiskFor(t.academic, t.college),
+      mainRisk: tier === "pathway" ? pathwayMainRisk(t.college) : explainTier(profile, t.college, t.relevance),
       safetyNote: tier === "safety" ? safetyNote(t.college) : undefined,
       pathwayNote: tier === "pathway" ? pathwayTransferNote(t.college) : undefined,
     }));
@@ -594,22 +457,8 @@ export function buildBalancedList(
 }
 
 // ============================================================
-// MAIN RISK  (the interpretation layer's honest caveat)
+// SAFETY / PATHWAY MESSAGING
 // ============================================================
-
-function mainRiskFor(academic: AcademicDistance, college: EngineCollege): string {
-  if (academic.isAcademicMismatch) {
-    return "Your current academic profile is significantly below this college's reported range.";
-  }
-  const rate = college.acceptanceRate ?? null;
-  if (rate != null && rate <= 25) {
-    return `Admission is ${selectivityLabel(rate)} and depends on the full applicant pool, even with a strong fit.`;
-  }
-  if (academic.combinedBand === "NEAR_RANGE" || academic.combinedBand === "BELOW_RANGE") {
-    return "Your academic profile is at the lower edge of this college's reported range.";
-  }
-  return "Admission depends on the full applicant pool and is never assured by a fit score.";
-}
 
 // Safety messaging: an overqualified college is presented honestly as
 // a separate safety option — never as a primary Target/Likely, and
@@ -646,8 +495,9 @@ export interface BalancedCollegeListItem {
   academicPositionLabel: string;
   academicReality: AcademicDistance;
   academicPosition: AcademicPosition | null;
-  selectivityBand: SelectivityBand | null;
-  selectivityBandLabel: string;
+  institutionalBand: InstitutionalSelectivityBand | null;
+  institutionalBandLabel: string;
+  institutionalIndex: number;
   mainRisk: string;
   safetyNote?: string;
   pathwayNote?: string;
@@ -698,10 +548,6 @@ export async function getBalancedCollegeList(
     const reasons = [...new Set(entry.result.dimensions.flatMap((d) => d.reasons))].slice(0, 3);
     const prismaCollege = byId.get(entry.college.id);
     if (!prismaCollege) throw new Error(`Missing college catalog row for ${entry.college.id}`);
-    const selectivityNote =
-      !entry.academic.isAcademicMismatch && entry.tier === "dream"
-        ? selectivityAdmissionMessage(entry.college.acceptanceRate ?? null)
-        : null;
     return {
       college: mapCollegeToUI(prismaCollege),
       matchScore: entry.result.score,
@@ -715,9 +561,10 @@ export async function getBalancedCollegeList(
       academicPositionLabel: entry.academicPositionLabel,
       academicReality: entry.academic,
       academicPosition: entry.academicPosition,
-      selectivityBand: entry.selectivityBand,
-      selectivityBandLabel: entry.selectivityBandLabel,
-      mainRisk: selectivityNote ?? entry.mainRisk,
+      institutionalBand: entry.institutionalBand,
+      institutionalBandLabel: entry.institutionalBandLabel,
+      institutionalIndex: entry.institutionalIndex,
+      mainRisk: entry.mainRisk,
       safetyNote: entry.safetyNote,
       pathwayNote: entry.pathwayNote,
     };

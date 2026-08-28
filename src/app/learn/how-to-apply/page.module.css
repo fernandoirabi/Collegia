@@ -1,0 +1,229 @@
+.main {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding-bottom: var(--space-20);
+}
+
+/* Header */
+.header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: calc(var(--nav-height) + var(--space-16)) 0 var(--space-16);
+}
+
+.eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: clamp(38px, 6vw, 64px);
+  color: var(--color-ink);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  max-width: 760px;
+}
+
+.sub {
+  font-size: 19px;
+  color: var(--color-ink-muted);
+  line-height: 1.6;
+  max-width: 640px;
+  margin-top: var(--space-5);
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+/* Section titles */
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  color: var(--color-ink);
+  margin-bottom: var(--space-3);
+  letter-spacing: -0.01em;
+}
+
+.sectionLead {
+  font-size: 16px;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-8);
+  max-width: 560px;
+}
+
+/* Roadmap */
+.roadmap {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-6);
+}
+
+.step {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  transition: all var(--duration-normal) var(--ease);
+}
+
+.step:hover {
+  border-color: var(--color-primary-mid);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
+}
+
+.stepTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+
+.stepNumber {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  color: var(--color-ink-faint);
+}
+
+.stepIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-bottom: var(--space-2);
+  line-height: 1.3;
+}
+
+.stepDesc {
+  font-size: 14px;
+  color: var(--color-ink-muted);
+  line-height: 1.55;
+}
+
+/* Featured grid */
+.featuredGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-6);
+}
+
+/* Grouped guides */
+.group {
+  margin-bottom: var(--space-16);
+}
+
+.groupHeader {
+  margin-bottom: var(--space-6);
+}
+
+.groupTitle {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  color: var(--color-ink);
+  margin-bottom: var(--space-2);
+}
+
+.groupDesc {
+  font-size: 15px;
+  color: var(--color-ink-muted);
+}
+
+.groupGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-6);
+}
+
+/* CTA section */
+.ctaSection {
+  margin-top: var(--space-24);
+  padding: 0 var(--space-5);
+}
+
+.ctaBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius-xl);
+  padding: var(--space-10);
+  flex-wrap: wrap;
+}
+
+.ctaIcon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.ctaBox > div {
+  flex: 1;
+  min-width: 240px;
+}
+
+.ctaTitle {
+  font-family: var(--font-serif);
+  font-size: 30px;
+  line-height: 1.2;
+  margin-bottom: var(--space-2);
+}
+
+.ctaDesc {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+}
+
+.ctaBox .btn-primary {
+  background: #fff;
+  color: var(--color-primary);
+  border-color: #fff;
+}
+
+.ctaBox .btn-primary:hover {
+  background: var(--color-primary-light);
+}
+
+@media (max-width: 1024px) {
+  .roadmap {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .featuredGrid {
+    grid-template-columns: 1fr;
+  }
+  .roadmap {
+    grid-template-columns: 1fr;
+  }
+  .title {
+    font-size: 38px;
+  }
+  .header {
+    padding: calc(var(--nav-height) + var(--space-10)) 0 var(--space-10);
+  }
+  .ctaBox {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,75 @@
+/* International Students — journey pathway */
+
+.pathwaySection {
+  margin-top: var(--space-16);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-10);
+}
+
+.pathwayHeader {
+  margin-bottom: var(--space-8);
+}
+
+.pathwayTitle {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  color: var(--color-ink);
+  margin-bottom: var(--space-2);
+}
+
+.pathwayLead {
+  font-size: 15px;
+  color: var(--color-ink-muted);
+  max-width: 560px;
+}
+
+.pathway {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.pathwayItem {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.pathwayNum {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  color: var(--color-ink-faint);
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.pathwayStep {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-bottom: var(--space-2);
+}
+
+.pathwayDesc {
+  font-size: 14px;
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 1024px) {
+  .pathway {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .pathway {
+    grid-template-columns: 1fr;
+  }
+  .pathwaySection {
+    padding: var(--space-6);
+  }
+}

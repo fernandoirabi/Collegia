@@ -44,6 +44,7 @@ function makeCollege(o: Partial<EngineCollege> = {}): EngineCollege {
     satRangeMax: 1530,
     actRangeMin: 33,
     actRangeMax: 35,
+    graduationRate: 92,
     estimatedTotalCost: 78000,
     internationalAidAvailable: true,
     meritScholarshipsAvailable: true,
@@ -83,20 +84,20 @@ const BUS2 = { name: "Business", category: "Business", strength: 2 };
 // A small but diverse catalog: elite, mid, and low-bar colleges
 // spread across regions, sizes, and types.
 const CATALOG: EngineCollege[] = [
-  makeCollege({ id: "columbia", name: "Columbia University", avgGpa: 4.0, satRangeMin: 1490, satRangeMax: 1580, estimatedTotalCost: 92000, region: "NORTHEAST", sizeCategory: "LARGE", type: "PRIVATE", majors: [ENG, BUS4] }),
-  makeCollege({ id: "cornell", name: "Cornell University", avgGpa: 3.9, satRangeMin: 1470, satRangeMax: 1560, estimatedTotalCost: 92000, region: "NORTHEAST", sizeCategory: "LARGE", type: "PRIVATE", majors: [ENG, BUS4] }),
-  makeCollege({ id: "northwestern", name: "Northwestern University", avgGpa: 4.0, satRangeMin: 1470, satRangeMax: 1560, estimatedTotalCost: 86000, region: "MIDWEST", sizeCategory: "LARGE", type: "PRIVATE", majors: [ENG4, BUS] }),
-  makeCollege({ id: "williams", name: "Williams College", avgGpa: 4.0, satRangeMin: 1490, satRangeMax: 1570, estimatedTotalCost: 90000, region: "NORTHEAST", sizeCategory: "SMALL", type: "PRIVATE", internationalAidAvailable: false, i20Support: false, optAvailable: false, internationalPercentage: 8, majors: [ENG1, BUS2] }),
-  makeCollege({ id: "nyu", name: "New York University", avgGpa: 3.9, satRangeMin: 1390, satRangeMax: 1510, estimatedTotalCost: 88000, region: "NORTHEAST", sizeCategory: "LARGE", type: "PRIVATE", majors: [ENG3, BUS] }),
-  makeCollege({ id: "georgiatech", name: "Georgia Institute of Technology", avgGpa: 4.0, satRangeMin: 1370, satRangeMax: 1530, estimatedTotalCost: 36000, region: "SOUTH", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG, BUS4] }),
-  makeCollege({ id: "florida", name: "University of Florida", avgGpa: 4.1, satRangeMin: 1330, satRangeMax: 1490, estimatedTotalCost: 26000, region: "SOUTH", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG4, BUS] }),
-  makeCollege({ id: "michiganstate", name: "Michigan State University", avgGpa: 3.7, satRangeMin: 1120, satRangeMax: 1320, estimatedTotalCost: 32000, region: "MIDWEST", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG3, BUS4] }),
-  makeCollege({ id: "asu", name: "Arizona State University", avgGpa: 3.5, satRangeMin: 1120, satRangeMax: 1340, estimatedTotalCost: 33000, region: "WEST_COAST", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG3, BUS4] }),
-  makeCollege({ id: "sdsu", name: "San Diego State University", avgGpa: 3.7, satRangeMin: 1090, satRangeMax: 1320, estimatedTotalCost: 36000, region: "WEST_COAST", sizeCategory: "LARGE", type: "PUBLIC", i20Support: false, internationalPercentage: 5, majors: [ENG2, BUS3] }),
-  makeCollege({ id: "lsu", name: "Louisiana State University", avgGpa: 3.5, satRangeMin: 1080, satRangeMax: 1320, estimatedTotalCost: 42000, region: "SOUTH", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG3, BUS4] }),
-  makeCollege({ id: "temple", name: "Temple University", avgGpa: 3.4, satRangeMin: 1070, satRangeMax: 1290, estimatedTotalCost: 47000, region: "NORTHEAST", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG3, BUS4] }),
-  makeCollege({ id: "delta", name: "Delta State University", avgGpa: 2.8, satRangeMin: 900, satRangeMax: 1100, estimatedTotalCost: 22000, region: "SOUTH", sizeCategory: "MEDIUM", type: "PUBLIC", majors: [ENG2, BUS4] }),
-  makeCollege({ id: "citycc", name: "City Community College", avgGpa: 2.8, satRangeMin: 850, satRangeMax: 1050, estimatedTotalCost: 12000, region: "SOUTH", sizeCategory: "MEDIUM", type: "PUBLIC", tags: ["Community College", "2-Year"], majors: [ENG2, BUS4] }),
+  makeCollege({ id: "columbia", name: "Columbia University", avgGpa: 4.0, satRangeMin: 1490, satRangeMax: 1580, acceptanceRate: 4, graduationRate: 96, estimatedTotalCost: 92000, region: "NORTHEAST", sizeCategory: "LARGE", type: "PRIVATE", majors: [ENG, BUS4] }),
+  makeCollege({ id: "cornell", name: "Cornell University", avgGpa: 3.9, satRangeMin: 1470, satRangeMax: 1560, acceptanceRate: 9, graduationRate: 94, estimatedTotalCost: 92000, region: "NORTHEAST", sizeCategory: "LARGE", type: "PRIVATE", majors: [ENG, BUS4] }),
+  makeCollege({ id: "northwestern", name: "Northwestern University", avgGpa: 4.0, satRangeMin: 1470, satRangeMax: 1560, acceptanceRate: 7, graduationRate: 96, estimatedTotalCost: 86000, region: "MIDWEST", sizeCategory: "LARGE", type: "PRIVATE", majors: [ENG4, BUS] }),
+  makeCollege({ id: "williams", name: "Williams College", avgGpa: 4.0, satRangeMin: 1490, satRangeMax: 1570, acceptanceRate: 10, graduationRate: 95, estimatedTotalCost: 90000, region: "NORTHEAST", sizeCategory: "SMALL", type: "PRIVATE", internationalAidAvailable: false, i20Support: false, optAvailable: false, internationalPercentage: 8, majors: [ENG1, BUS2] }),
+  makeCollege({ id: "nyu", name: "New York University", avgGpa: 3.9, satRangeMin: 1390, satRangeMax: 1510, acceptanceRate: 13, graduationRate: 85, estimatedTotalCost: 88000, region: "NORTHEAST", sizeCategory: "LARGE", type: "PRIVATE", majors: [ENG3, BUS] }),
+  makeCollege({ id: "georgiatech", name: "Georgia Institute of Technology", avgGpa: 4.0, satRangeMin: 1370, satRangeMax: 1530, acceptanceRate: 17, graduationRate: 92, estimatedTotalCost: 36000, region: "SOUTH", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG, BUS4] }),
+  makeCollege({ id: "florida", name: "University of Florida", avgGpa: 4.1, satRangeMin: 1330, satRangeMax: 1490, acceptanceRate: 24, graduationRate: 88, estimatedTotalCost: 26000, region: "SOUTH", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG4, BUS] }),
+  makeCollege({ id: "michiganstate", name: "Michigan State University", avgGpa: 3.7, satRangeMin: 1120, satRangeMax: 1320, acceptanceRate: 88, graduationRate: 82, estimatedTotalCost: 32000, region: "MIDWEST", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG3, BUS4] }),
+  makeCollege({ id: "asu", name: "Arizona State University", avgGpa: 3.5, satRangeMin: 1120, satRangeMax: 1340, acceptanceRate: 80, graduationRate: 65, estimatedTotalCost: 33000, region: "WEST_COAST", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG3, BUS4] }),
+  makeCollege({ id: "sdsu", name: "San Diego State University", avgGpa: 3.7, satRangeMin: 1090, satRangeMax: 1320, acceptanceRate: 37, graduationRate: 75, estimatedTotalCost: 36000, region: "WEST_COAST", sizeCategory: "LARGE", type: "PUBLIC", i20Support: false, internationalPercentage: 5, majors: [ENG2, BUS3] }),
+  makeCollege({ id: "lsu", name: "Louisiana State University", avgGpa: 3.5, satRangeMin: 1080, satRangeMax: 1320, acceptanceRate: 73, graduationRate: 68, estimatedTotalCost: 42000, region: "SOUTH", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG3, BUS4] }),
+  makeCollege({ id: "temple", name: "Temple University", avgGpa: 3.4, satRangeMin: 1070, satRangeMax: 1290, acceptanceRate: 73, graduationRate: 75, estimatedTotalCost: 47000, region: "NORTHEAST", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG3, BUS4] }),
+  makeCollege({ id: "delta", name: "Delta State University", avgGpa: 2.8, satRangeMin: 900, satRangeMax: 1100, acceptanceRate: 95, graduationRate: 40, estimatedTotalCost: 22000, region: "SOUTH", sizeCategory: "MEDIUM", type: "PUBLIC", majors: [ENG2, BUS4] }),
+  makeCollege({ id: "citycc", name: "City Community College", avgGpa: 2.8, satRangeMin: 850, satRangeMax: 1050, acceptanceRate: 100, graduationRate: 25, estimatedTotalCost: 12000, region: "SOUTH", sizeCategory: "MEDIUM", type: "PUBLIC", tags: ["Community College", "2-Year"], majors: [ENG2, BUS4] }),
 ];
 
 function scored(profile: EngineProfile, catalog: EngineCollege[]) {
@@ -265,11 +266,11 @@ test("15. a weak student's realistic tiers never include a dramatic-mismatch col
 // (the shared CATALOG above intentionally leaves it null).
 
 const SELECTIVE: EngineCollege[] = [
-  makeCollege({ id: "stanford", name: "Stanford University", avgGpa: 4.0, satRangeMin: 1490, satRangeMax: 1580, acceptanceRate: 4, estimatedTotalCost: 85000, region: "WEST_COAST", sizeCategory: "MEDIUM", type: "PRIVATE", majors: [ENG] }),
-  makeCollege({ id: "georgiatech", name: "Georgia Institute of Technology", avgGpa: 4.0, satRangeMin: 1370, satRangeMax: 1530, acceptanceRate: 17, estimatedTotalCost: 36000, region: "SOUTH", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG] }),
-  makeCollege({ id: "asu", name: "Arizona State University", avgGpa: 3.5, satRangeMin: 1120, satRangeMax: 1340, acceptanceRate: 80, estimatedTotalCost: 33000, region: "WEST_COAST", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG3] }),
-  makeCollege({ id: "alabamaam", name: "Alabama A&M University", avgGpa: 2.8, satRangeMin: 850, satRangeMax: 1050, acceptanceRate: 90, estimatedTotalCost: 22000, region: "SOUTH", sizeCategory: "MEDIUM", type: "PUBLIC", majors: [ENG2, BUS4] }),
-  makeCollege({ id: "citycc", name: "City Community College", avgGpa: 2.8, satRangeMin: 850, satRangeMax: 1050, acceptanceRate: 100, estimatedTotalCost: 12000, region: "SOUTH", sizeCategory: "MEDIUM", type: "PUBLIC", tags: ["Community College", "2-Year"], majors: [ENG2, BUS4] }),
+  makeCollege({ id: "stanford", name: "Stanford University", avgGpa: 4.0, satRangeMin: 1490, satRangeMax: 1580, acceptanceRate: 4, graduationRate: 96, estimatedTotalCost: 85000, region: "WEST_COAST", sizeCategory: "MEDIUM", type: "PRIVATE", majors: [ENG] }),
+  makeCollege({ id: "georgiatech", name: "Georgia Institute of Technology", avgGpa: 4.0, satRangeMin: 1370, satRangeMax: 1530, acceptanceRate: 17, graduationRate: 92, estimatedTotalCost: 36000, region: "SOUTH", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG] }),
+  makeCollege({ id: "asu", name: "Arizona State University", avgGpa: 3.5, satRangeMin: 1120, satRangeMax: 1340, acceptanceRate: 80, graduationRate: 65, estimatedTotalCost: 33000, region: "WEST_COAST", sizeCategory: "LARGE", type: "PUBLIC", majors: [ENG3] }),
+  makeCollege({ id: "alabamaam", name: "Alabama A&M University", avgGpa: 2.8, satRangeMin: 850, satRangeMax: 1050, acceptanceRate: 90, graduationRate: 40, estimatedTotalCost: 22000, region: "SOUTH", sizeCategory: "MEDIUM", type: "PUBLIC", majors: [ENG2, BUS4] }),
+  makeCollege({ id: "citycc", name: "City Community College", avgGpa: 2.8, satRangeMin: 850, satRangeMax: 1050, acceptanceRate: 100, graduationRate: 25, estimatedTotalCost: 12000, region: "SOUTH", sizeCategory: "MEDIUM", type: "PUBLIC", tags: ["Community College", "2-Year"], majors: [ENG2, BUS4] }),
 ];
 
 function buildSelective(profile: EngineProfile): BalancedList {

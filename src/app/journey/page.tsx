@@ -82,7 +82,7 @@ export default async function JourneyPage() {
                   <p className={styles.nextStepLabel}>Action Required</p>
                   <p className={styles.nextStepTitle}>Draft your personal statement</p>
                 </div>
-                <Link href="/learn/writing-a-strong-college-essay" className="btn btn-outline-white btn-sm" style={{marginLeft: "auto"}}>
+                <Link href="/learn/personal-statement" className="btn btn-outline-white btn-sm" style={{marginLeft: "auto"}}>
                   Read Guide
                 </Link>
               </div>

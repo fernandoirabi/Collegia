@@ -104,6 +104,7 @@ export interface EngineCollege {
   satRangeMax: number | null;
   actRangeMin: number | null;
   actRangeMax: number | null;
+  graduationRate?: number | null;
   estimatedTotalCost: number | null;
   internationalAidAvailable: boolean | null;
   meritScholarshipsAvailable: boolean | null;
