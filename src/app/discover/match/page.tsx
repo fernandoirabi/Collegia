@@ -2,12 +2,13 @@
 
 import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ArrowRight, Sparkles, ChevronRight, Check, Plus, ChevronDown, MapPin } from "lucide-react";
 import Link from "next/link";
 import { getBalancedCollegeListAction } from "@/actions/match-results";
 import { saveCollegeAction } from "@/actions/saved-colleges";
 import { updateStudentPreferencesAction, updateStudentProfileAction } from "@/actions/profile";
+import CollegeImage from "@/components/ui/CollegeImage";
 import type { BalancedCollegeListView, BalancedCollegeListItem } from "@/lib/services/college-list-builder.service";
 import styles from "./page.module.css";
 
@@ -144,17 +145,26 @@ function ResultCard({
     <div className={styles.resultRow}>
       {/* ===== MOBILE CARD ===== */}
       <div className={styles.mobileCard}>
+        <div className={styles.mobileCover}>
+          <CollegeImage
+            src={r.college.coverImage}
+            alt={`${r.college.name} campus`}
+            variant="cover"
+            sizes="(max-width: 768px) 100vw, 60vw"
+          />
+        </div>
         <div className={styles.mobileHeader}>
-          <Link href={`/college/${r.college.slug}`} className={styles.resultSchool}>
-            {r.college.name}
-          </Link>
+          <div className={styles.mobileIdentity}>
+            <Link href={`/college/${r.college.slug}`} className={styles.resultSchool}>
+              {r.college.name}
+            </Link>
+            <p className={styles.resultLocation}>
+              <MapPin size={12} className={styles.locPin} /> {r.college.location.city},{" "}
+              {r.college.location.state}
+            </p>
+          </div>
           <span className={styles.mobileSave}>{saveButton(true)}</span>
         </div>
-
-        <p className={styles.resultLocation}>
-          <MapPin size={12} className={styles.locPin} /> {r.college.location.city},{" "}
-          {r.college.location.state}
-        </p>
 
         <div className={styles.mobileTags}>
           <span className={`badge ${style.badge}`}>{r.classificationLabel}</span>
@@ -266,8 +276,17 @@ function ResultCard({
 
       {/* ===== DESKTOP CARD ===== */}
       <div className={styles.desktopCard}>
-        <div className={styles.resultDot} style={{ background: style.dot }} />
-        <div className={styles.resultInfo}>
+        <div className={styles.desktopCover}>
+          <CollegeImage
+            src={r.college.coverImage}
+            alt={`${r.college.name} campus`}
+            variant="cover"
+            sizes="(max-width: 768px) 100vw, 70vw"
+            style={{ "--college-aspect": "16 / 7" } as CSSProperties}
+          />
+        </div>
+        <div className={styles.desktopBody}>
+          <div className={styles.resultInfo}>
           <Link href={`/college/${r.college.slug}`} className={styles.resultSchool}>
             {r.college.name}
           </Link>
@@ -309,6 +328,7 @@ function ResultCard({
           <span className={`badge ${style.badge}`}>{r.classificationLabel}</span>
           <span className={styles.resultAccept}>{r.matchScore} Collegia Match</span>
           {saveButton(false)}
+        </div>
         </div>
       </div>
     </div>

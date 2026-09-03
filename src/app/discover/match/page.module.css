@@ -388,15 +388,37 @@
 
 /* Desktop card (rich/inline). Hidden on mobile. */
 .desktopCard {
+  display: block;
+  padding: var(--space-5);
+}
+
+/* Full-width campus cover at the top of the desktop card (~16:7, capped height). */
+.desktopCover {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  max-height: 220px;
+}
+
+/* Body row beneath the desktop cover: info + badges/save side by side. */
+.desktopBody {
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding-top: var(--space-4);
 }
 
 /* Mobile card (compact, progressive disclosure). Visible only on mobile. */
 .mobileCard {
   display: none;
+}
+
+/* Full-width campus cover at the top of the mobile card (~16:9, capped height). */
+.mobileCover {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  max-height: 210px;
+  margin-bottom: var(--space-3);
 }
 
 .resultDot {
@@ -585,8 +607,20 @@
 .mobileHeader {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
   gap: var(--space-3);
+}
+
+.mobileIdentity {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobileIdentity .resultSchool {
+  display: block;
+}
+
+.mobileIdentity .resultLocation {
+  margin-top: 3px;
 }
 
 .mobileSave {

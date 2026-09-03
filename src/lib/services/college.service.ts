@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { getCollegeImage } from "@/data/college-images";
 import type { College } from "@/types";
 import type { Prisma, College as PrismaCollege, CollegeRegion, ApplicationPlan } from "@prisma/client";
 
@@ -41,6 +42,11 @@ export function mapCollegeToUI(c: CollegeWithRelations): College {
   const rolling = c.deadlines.find((d) => d.plan === "ROLLING");
 
   const intlPop = c.internationalPopulation ?? 0;
+
+  // A curated per-college campus photo (from Wikimedia Commons) takes priority
+  // for the large cover treatment, falling back to the seeded/regional image and
+  // finally the shared hero. `image` stays as-is for small card thumbnails.
+  const coverImage = getCollegeImage(c.slug) ?? c.coverImage ?? c.image ?? "/images/hero_campus.jpg";
 
   return {
     id: c.id,
@@ -93,7 +99,7 @@ export function mapCollegeToUI(c: CollegeWithRelations): College {
       greekLife: c.greekLife ?? false,
     },
     image: c.image ?? "/images/hero_campus.jpg",
-    coverImage: c.coverImage ?? c.image ?? "/images/hero_campus.jpg",
+    coverImage,
     tags: c.tags ?? [],
     featured: c.featured,
   };
