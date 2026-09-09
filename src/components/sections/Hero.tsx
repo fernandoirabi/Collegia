@@ -64,6 +64,7 @@ export default function Hero() {
             <span className={styles.floatLabel}>To Get Started</span>
           </div>
         </div>
+        <p className={styles.demoNote}>Illustrative placeholder figures — live campus data loads on launch.</p>
       </div>
 
       {/* Scroll indicator */}

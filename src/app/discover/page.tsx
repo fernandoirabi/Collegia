@@ -119,10 +119,7 @@ export default async function DiscoverPage() {
             <div className={styles.collegeGrid}>
               {featuredColleges.map((college, i) => (
                 <ScrollReveal key={college.id} delay={i * 80}>
-                  <CollegeCard
-                    college={college}
-                    matchType={i === 0 ? "Strong Match" : i === 1 ? "Target" : i === 2 ? "Reach" : "Target"}
-                  />
+                  <CollegeCard college={college} />
                 </ScrollReveal>
               ))}
             </div>

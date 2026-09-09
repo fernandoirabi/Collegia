@@ -427,6 +427,12 @@ ul, ol {
   color: var(--color-sky);
 }
 
+.badge-demo {
+  background: var(--color-lavender-light);
+  color: var(--color-lavender);
+  font-weight: 600;
+}
+
 .badge-lavender {
   background: var(--color-lavender-light);
   color: var(--color-lavender);

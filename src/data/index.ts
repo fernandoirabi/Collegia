@@ -53,6 +53,8 @@ export const colleges: College[] = [
     coverImage: "/images/campus_boston.jpg",
     tags: ["Research", "Jesuit", "Division I", "Need-Blind"],
     featured: true,
+    isDemoData: true,
+    verificationStatus: "DEMO",
   },
   {
     id: "2",
@@ -101,6 +103,8 @@ export const colleges: College[] = [
     coverImage: "/images/campus_florida.jpg",
     tags: ["Research University", "SEC", "Division I", "Flagship"],
     featured: true,
+    isDemoData: true,
+    verificationStatus: "DEMO",
   },
   {
     id: "3",
@@ -151,6 +155,8 @@ export const colleges: College[] = [
     coverImage: "/images/campus_nyc.jpg",
     tags: ["Global", "Urban", "Arts", "Research"],
     featured: true,
+    isDemoData: true,
+    verificationStatus: "DEMO",
   },
   {
     id: "4",
@@ -199,6 +205,8 @@ export const colleges: College[] = [
     coverImage: "/images/campus_california.jpg",
     tags: ["Research", "Public Ivy", "Division I", "PAC-12"],
     featured: true,
+    isDemoData: true,
+    verificationStatus: "DEMO",
   },
   {
     id: "5",
@@ -248,6 +256,8 @@ export const colleges: College[] = [
     coverImage: "/images/campus_boston.jpg",
     tags: ["Research", "Public Ivy", "Big Ten", "Division I"],
     featured: false,
+    isDemoData: true,
+    verificationStatus: "DEMO",
   },
   {
     id: "6",
@@ -297,6 +307,8 @@ export const colleges: College[] = [
     coverImage: "/images/campus_florida.jpg",
     tags: ["STEM", "Engineering", "Research", "Big Ten"],
     featured: false,
+    isDemoData: true,
+    verificationStatus: "DEMO",
   },
 ];
 
@@ -336,7 +348,7 @@ export const demoGoals: Goal[] = [
   {
     id: "1",
     title: "Reach 1400 SAT",
-    description: "Focus on Math section â€” aim for 750+ to boost your score significantly.",
+    description: "Focus on Math section — aim for 750+ to boost your score significantly.",
     current: 1320,
     target: 1400,
     unit: "points",
@@ -378,7 +390,7 @@ export const locationOptions = [
 ];
 
 export const costRanges = [
-  "Under $20K", "$20Kâ€“$35K", "$35Kâ€“$50K", "$50Kâ€“$65K", "$65K+",
+  "Under $20K", "$20K–$35K", "$35K–$50K", "$50K–$65K", "$65K+",
 ];
 
-export const campusSizes = ["Small (Under 5K)", "Medium (5Kâ€“15K)", "Large (15K+)"];
+export const campusSizes = ["Small (Under 5K)", "Medium (5K–15K)", "Large (15K+)"];

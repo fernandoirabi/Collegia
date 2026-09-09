@@ -41,8 +41,6 @@ export function mapCollegeToUI(c: CollegeWithRelations): College {
   const earlyDecision = c.deadlines.find((d) => d.plan === "EARLY_DECISION");
   const rolling = c.deadlines.find((d) => d.plan === "ROLLING");
 
-  const intlPop = c.internationalPopulation ?? 0;
-
   // A curated per-college campus photo (from Wikimedia Commons) takes priority
   // for the large cover treatment, falling back to the seeded/regional image and
   // finally the shared hero. `image` stays as-is for small card thumbnails.
@@ -62,22 +60,22 @@ export function mapCollegeToUI(c: CollegeWithRelations): College {
     size: c.sizeCategory === "LARGE" ? "Large" : c.sizeCategory === "MEDIUM" ? "Medium" : "Small",
     setting: c.setting === "URBAN" ? "Urban" : c.setting === "RURAL" ? "Rural" : "Suburban",
     admissions: {
-      acceptanceRate: c.acceptanceRate ?? 0,
-      avgGPA: c.avgGpa ?? 0,
-      satRange: [c.satRangeMin ?? 0, c.satRangeMax ?? 0],
-      actRange: [c.actRangeMin ?? 0, c.actRangeMax ?? 0],
+      acceptanceRate: c.acceptanceRate,
+      avgGPA: c.avgGpa,
+      satRange: [c.satRangeMin, c.satRangeMax],
+      actRange: [c.actRangeMin, c.actRangeMax],
       applicationDeadline: regular ? formatDeadline(regular.date) : rolling ? "Rolling" : "Rolling",
       earlyDecisionDeadline: earlyDecision ? formatDeadline(earlyDecision.date) : undefined,
     },
     academics: {
       strongPrograms: c.majors.map((m) => m.major.name),
-      graduationRate: c.graduationRate ?? 0,
+      graduationRate: c.graduationRate,
       studentFacultyRatio: c.studentFacultyRatio ?? "—",
     },
     cost: {
-      tuitionInternational: c.tuitionInternational ?? 0,
-      roomAndBoard: c.roomAndBoard ?? 0,
-      totalCost: c.estimatedTotalCostInternational ?? (c.tuitionInternational ?? 0) + (c.roomAndBoard ?? 0),
+      tuitionInternational: c.tuitionInternational,
+      roomAndBoard: c.roomAndBoard,
+      totalCost: c.estimatedTotalCostInternational ?? null,
     },
     financial: {
       meetsFullNeed: c.meetsFullNeed ?? false,
@@ -85,10 +83,11 @@ export function mapCollegeToUI(c: CollegeWithRelations): College {
       avgAidAmount: c.avgAidInternational ?? undefined,
     },
     international: {
-      internationalPercentage: c.internationalPercentage ?? 0,
-      countriesRepresented: c.internationalPopulation
-        ? Math.min(140, Math.max(40, Math.round(c.internationalPopulation / 55)))
-        : 0,
+      internationalPercentage: c.internationalPercentage,
+      // countriesRepresented was previously fabricated from a synthetic
+      // formula. The real value is not stored, so we expose null and let the
+      // UI render "Not reported" rather than inventing a number.
+      countriesRepresented: null,
       i20Support: c.i20Support ?? false,
       optAvailable: c.optAvailable ?? false,
     },
@@ -102,6 +101,8 @@ export function mapCollegeToUI(c: CollegeWithRelations): College {
     coverImage,
     tags: c.tags ?? [],
     featured: c.featured,
+    isDemoData: c.isDemoData,
+    verificationStatus: c.verificationStatus,
   };
 }
 

@@ -26,6 +26,13 @@ export interface CollegeListAnalysis {
 
 export async function analyzeCollegeList(): Promise<CollegeListAnalysis> {
   const userId = await getCurrentUserId();
+  if (!userId) {
+    return {
+      counts: { strongMatch: 0, target: 0, reach: 0, total: 0 },
+      balance: "empty",
+      message: "Add colleges to your list to see your match balance.",
+    };
+  }
 
   // MatchScore is the authoritative source for classification.
   const scores = await prisma.matchScore.findMany({

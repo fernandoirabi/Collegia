@@ -7,9 +7,11 @@ import Footer from "@/components/layout/Footer";
 import SaveCollegeButton from "@/components/ui/SaveCollegeButton";
 import MatchPanel from "@/components/match/MatchPanel";
 import MatchHistoryPanel from "@/components/match/MatchHistoryPanel";
+import DataTrustBadge from "@/components/ui/DataTrustBadge";
 import { getCollegeBySlug } from "@/lib/services/college.service";
 import { getMatchView, getMatchHistory } from "@/lib/services/match-score.service";
 import { getRecommendationsForCollege } from "@/lib/services/recommendation.service";
+import { formatPercent, formatGpa, formatRange, formatCost, NOT_REPORTED } from "@/lib/format";
 import { MapPin, BarChart2, Sparkles, Globe, Users, GraduationCap } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -89,8 +91,11 @@ export default async function CollegeProfilePage({ params }: Props) {
                   {college.financial.internationalAid && (
                     <span className="badge badge-strong">Int&apos;l Aid Available</span>
                   )}
-                </div>
-                <h1 className={styles.collegeName}>{college.name}</h1>
+                  <DataTrustBadge
+                    isDemoData={college.isDemoData}
+                    verificationStatus={college.verificationStatus}
+                  />
+                </div>                <h1 className={styles.collegeName}>{college.name}</h1>
                 <p className={styles.collegeLocation}>
                   <MapPin size={14} />
                   {college.location.city}, {college.location.state}
@@ -100,22 +105,22 @@ export default async function CollegeProfilePage({ params }: Props) {
               {/* Quick stats */}
               <div className={styles.quickStats}>
                 <div className={styles.qStat}>
-                  <span className={styles.qStatVal}>{college.admissions.acceptanceRate}%</span>
+                  <span className={styles.qStatVal}>{formatPercent(college.admissions.acceptanceRate)}</span>
                   <span className={styles.qStatLbl}>Acceptance Rate</span>
                 </div>
                 <div className={styles.qStatDivider} />
                 <div className={styles.qStat}>
-                  <span className={styles.qStatVal}>{college.admissions.avgGPA}</span>
+                  <span className={styles.qStatVal}>{formatGpa(college.admissions.avgGPA)}</span>
                   <span className={styles.qStatLbl}>Avg GPA</span>
                 </div>
                 <div className={styles.qStatDivider} />
                 <div className={styles.qStat}>
-                  <span className={styles.qStatVal}>{college.admissions.satRange[0]}–{college.admissions.satRange[1]}</span>
+                  <span className={styles.qStatVal}>{formatRange(college.admissions.satRange[0], college.admissions.satRange[1])}</span>
                   <span className={styles.qStatLbl}>SAT Range</span>
                 </div>
                 <div className={styles.qStatDivider} />
                 <div className={styles.qStat}>
-                  <span className={styles.qStatVal}>{college.international.internationalPercentage}%</span>
+                  <span className={styles.qStatVal}>{formatPercent(college.international.internationalPercentage)}</span>
                   <span className={styles.qStatLbl}>International</span>
                 </div>
               </div>
@@ -156,7 +161,7 @@ export default async function CollegeProfilePage({ params }: Props) {
                   <div className={styles.statBlock}>
                     <GraduationCap size={20} color="var(--color-primary)" />
                     <div>
-                      <p className={styles.statVal}>{college.academics.graduationRate}%</p>
+                      <p className={styles.statVal}>{formatPercent(college.academics.graduationRate)}</p>
                       <p className={styles.statLbl}>Graduation Rate</p>
                     </div>
                   </div>
@@ -170,7 +175,7 @@ export default async function CollegeProfilePage({ params }: Props) {
                   <div className={styles.statBlock}>
                     <Globe size={20} color="var(--color-sky)" />
                     <div>
-                      <p className={styles.statVal}>{college.international.countriesRepresented}+</p>
+                      <p className={styles.statVal}>{college.international.countriesRepresented != null ? `${college.international.countriesRepresented}+` : NOT_REPORTED}</p>
                       <p className={styles.statLbl}>Countries Represented</p>
                     </div>
                   </div>
@@ -183,29 +188,37 @@ export default async function CollegeProfilePage({ params }: Props) {
                 <div className={styles.admissionsGrid}>
                   <div className={styles.adField}>
                     <p className={styles.adLabel}>Acceptance Rate</p>
-                    <div className={styles.adBar}>
-                      <div className="progress-bar-track">
-                        <div className="progress-bar-fill" style={{width:`${college.admissions.acceptanceRate}%`}} />
+                    {college.admissions.acceptanceRate != null ? (
+                      <div className={styles.adBar}>
+                        <div className="progress-bar-track">
+                          <div className="progress-bar-fill" style={{width:`${college.admissions.acceptanceRate}%`}} />
+                        </div>
+                        <span className={styles.adVal}>{formatPercent(college.admissions.acceptanceRate)}</span>
                       </div>
-                      <span className={styles.adVal}>{college.admissions.acceptanceRate}%</span>
-                    </div>
+                    ) : (
+                      <p className={styles.adBig}>{NOT_REPORTED}</p>
+                    )}
                   </div>
                   <div className={styles.adField}>
                     <p className={styles.adLabel}>Average GPA</p>
-                    <div className={styles.adBar}>
-                      <div className="progress-bar-track">
-                        <div className="progress-bar-fill green" style={{width:`${(college.admissions.avgGPA / 4.0) * 100}%`}} />
+                    {college.admissions.avgGPA != null ? (
+                      <div className={styles.adBar}>
+                        <div className="progress-bar-track">
+                          <div className="progress-bar-fill green" style={{width:`${(college.admissions.avgGPA / 4.0) * 100}%`}} />
+                        </div>
+                        <span className={styles.adVal}>{formatGpa(college.admissions.avgGPA)}</span>
                       </div>
-                      <span className={styles.adVal}>{college.admissions.avgGPA}</span>
-                    </div>
+                    ) : (
+                      <p className={styles.adBig}>{NOT_REPORTED}</p>
+                    )}
                   </div>
                   <div className={styles.adField}>
                     <p className={styles.adLabel}>SAT Middle 50%</p>
-                    <p className={styles.adBig}>{college.admissions.satRange[0]}–{college.admissions.satRange[1]}</p>
+                    <p className={styles.adBig}>{formatRange(college.admissions.satRange[0], college.admissions.satRange[1])}</p>
                   </div>
                   <div className={styles.adField}>
                     <p className={styles.adLabel}>ACT Middle 50%</p>
-                    <p className={styles.adBig}>{college.admissions.actRange[0]}–{college.admissions.actRange[1]}</p>
+                    <p className={styles.adBig}>{formatRange(college.admissions.actRange[0], college.admissions.actRange[1])}</p>
                   </div>
                 </div>
                 <p className={styles.admissionsNote}>
@@ -229,15 +242,15 @@ export default async function CollegeProfilePage({ params }: Props) {
                 <div className={styles.costGrid}>
                   <div className={styles.costRow}>
                     <span className={styles.costLabel}>Tuition</span>
-                    <span className={styles.costVal}>${college.cost.tuitionInternational.toLocaleString()}/yr</span>
+                    <span className={styles.costVal}>{formatCost(college.cost.tuitionInternational)}/yr</span>
                   </div>
                   <div className={styles.costRow}>
                     <span className={styles.costLabel}>Room & Board</span>
-                    <span className={styles.costVal}>${college.cost.roomAndBoard.toLocaleString()}/yr</span>
+                    <span className={styles.costVal}>{formatCost(college.cost.roomAndBoard)}/yr</span>
                   </div>
                   <div className={`${styles.costRow} ${styles.costTotal}`}>
                     <span className={styles.costLabel}>Estimated Total</span>
-                    <span className={styles.costVal}>${college.cost.totalCost.toLocaleString()}/yr</span>
+                    <span className={styles.costVal}>{formatCost(college.cost.totalCost)}/yr</span>
                   </div>
                 </div>
               </div>
@@ -265,11 +278,11 @@ export default async function CollegeProfilePage({ params }: Props) {
                 <p className={styles.intlTitle}>International Students</p>
                 <div className={styles.intlStats}>
                   <div className={styles.intlStat}>
-                    <p className={styles.intlVal}>{college.international.internationalPercentage}%</p>
+                    <p className={styles.intlVal}>{formatPercent(college.international.internationalPercentage)}</p>
                     <p className={styles.intlLbl}>International</p>
                   </div>
                   <div className={styles.intlStat}>
-                    <p className={styles.intlVal}>{college.international.countriesRepresented}+</p>
+                    <p className={styles.intlVal}>{college.international.countriesRepresented != null ? `${college.international.countriesRepresented}+` : NOT_REPORTED}</p>
                     <p className={styles.intlLbl}>Countries</p>
                   </div>
                 </div>

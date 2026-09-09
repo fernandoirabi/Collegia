@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { MapPin, TrendingUp, Users } from "lucide-react";
 import type { College } from "@/types";
+import { formatPercent, formatGpa, formatRange, formatCost } from "@/lib/format";
+import DataTrustBadge from "./DataTrustBadge";
 import styles from "./CollegeCard.module.css";
 
 interface CollegeCardProps {
@@ -32,6 +34,12 @@ export default function CollegeCard({ college, matchType, matchScore, variant = 
           <p className={styles.compactLocation}>
             {college.location.city}, {college.location.stateCode}
           </p>
+          {(college.isDemoData || college.verificationStatus === "DEMO" || college.verificationStatus === "UNVERIFIED") && (
+            <DataTrustBadge
+              isDemoData={college.isDemoData}
+              verificationStatus={college.verificationStatus}
+            />
+          )}
           {match && (
             <span className={`badge ${match.cls}`}>
               <span className={`${styles.dot} ${match.dot}`} />
@@ -68,6 +76,14 @@ export default function CollegeCard({ college, matchType, matchScore, variant = 
         <div className={styles.typePill}>{college.type}</div>
       </div>
 
+      {/* Data trust indicator */}
+      <div className={styles.trustRow}>
+        <DataTrustBadge
+          isDemoData={college.isDemoData}
+          verificationStatus={college.verificationStatus}
+        />
+      </div>
+
       {/* Content */}
       <div className={styles.content}>
         <div className={styles.header}>
@@ -83,18 +99,18 @@ export default function CollegeCard({ college, matchType, matchScore, variant = 
         {/* Stats Row */}
         <div className={styles.stats}>
           <div className={styles.stat}>
-            <span className={styles.statVal}>{college.admissions.acceptanceRate}%</span>
+            <span className={styles.statVal}>{formatPercent(college.admissions.acceptanceRate)}</span>
             <span className={styles.statLbl}>Acceptance</span>
           </div>
           <div className={styles.statDivider} />
           <div className={styles.stat}>
-            <span className={styles.statVal}>{college.admissions.avgGPA}</span>
+            <span className={styles.statVal}>{formatGpa(college.admissions.avgGPA)}</span>
             <span className={styles.statLbl}>Avg GPA</span>
           </div>
           <div className={styles.statDivider} />
           <div className={styles.stat}>
             <span className={styles.statVal}>
-              {college.admissions.satRange[0]}–{college.admissions.satRange[1]}
+              {formatRange(college.admissions.satRange[0], college.admissions.satRange[1])}
             </span>
             <span className={styles.statLbl}>SAT Range</span>
           </div>
@@ -111,7 +127,7 @@ export default function CollegeCard({ college, matchType, matchScore, variant = 
         <div className={styles.footer}>
           <div className={styles.costRow}>
             <TrendingUp size={13} />
-            <span>${(college.cost.tuitionInternational / 1000).toFixed(0)}K/yr tuition</span>
+            <span>{formatCost(college.cost.tuitionInternational)}/yr tuition</span>
           </div>
           {college.financial.internationalAid && (
             <div className={styles.aidBadge}>

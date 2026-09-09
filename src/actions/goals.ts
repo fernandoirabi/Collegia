@@ -22,7 +22,9 @@ export async function createGoalAction(rawInput: unknown): Promise<GoalActionRes
     return { ok: false, error: "One or more goal fields are invalid." };
   }
   try {
-    const goal = await createGoalService(parsed.data);
+    const goal = await createGoalService({
+      ...parsed.data,
+    });
     revalidatePath("/journey/goals");
     revalidatePath("/journey");
     return { ok: true, data: goal };

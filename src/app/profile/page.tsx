@@ -3,6 +3,7 @@ import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import ProfileContent from "@/components/profile/ProfileContent";
 import { getStudentProfile } from "@/lib/services/profile.service";
+import { requireUserIdFromPage } from "@/lib/auth/require-auth";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -13,7 +14,9 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
+  const userId = await requireUserIdFromPage();
   const profile = await getStudentProfile();
+  void userId;
 
   return (
     <>

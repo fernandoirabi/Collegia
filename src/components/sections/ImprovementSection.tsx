@@ -109,6 +109,10 @@ export default function ImprovementSection() {
 
           <p className={styles.goalsTitle}>Your next opportunities</p>
 
+          <p className={styles.goalsDisclaimer}>
+            Illustrative demo goals and outcomes — not tied to your actual profile.
+          </p>
+
           {goals.map((goal, i) => {
             const Icon = goal.icon;
             return (

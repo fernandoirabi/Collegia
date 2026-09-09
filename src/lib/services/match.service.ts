@@ -80,17 +80,17 @@ export function demoClassifyCollege(
   const reasons: string[] = [];
   const breakdown: MatchDimensionScore[] = [];
 
-  const hasStrongAcademics = profile?.gpa != null && college.admissions.avgGPA > 0
+  const hasStrongAcademics = profile?.gpa != null && college.admissions.avgGPA != null && college.admissions.avgGPA > 0
     ? profile.gpa >= college.admissions.avgGPA
     : false;
-  const hasSat = profile?.satScore != null && college.admissions.satRange[1] > 0
-    ? profile.satScore >= college.admissions.satRange[0]
+  const hasSat = profile?.satScore != null && college.admissions.satRange[1] != null && college.admissions.satRange[1] > 0
+    ? profile.satScore != null && college.admissions.satRange[0] != null && profile.satScore >= college.admissions.satRange[0]
     : false;
 
   if (hasStrongAcademics) score += 12;
   if (hasSat) score += 8;
 
-  if (profile?.financialAid?.annualBudget != null && college.cost.totalCost > 0) {
+  if (profile?.financialAid?.annualBudget != null && college.cost.totalCost != null && college.cost.totalCost > 0) {
     if (profile.financialAid.annualBudget >= college.cost.totalCost) score += 10;
     else if (college.financial.internationalAid) score += 5;
   }

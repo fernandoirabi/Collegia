@@ -176,6 +176,7 @@ export async function computeAndPersistMatch(
  */
 export async function recomputeSavedColleges(): Promise<number> {
   const userId = await getCurrentUserId();
+  if (!userId) return 0;
   const saved = await prisma.savedCollege.findMany({
     where: { userId },
     select: { collegeId: true },
@@ -208,10 +209,14 @@ export async function getMatchView(collegeId: string): Promise<MatchView | null>
 
   const result = computeMatch(inputs.engineProfile, collegeToEngineCollege(inputs.college));
 
-  const savedRow = await prisma.savedCollege.findUnique({
-    where: { userId_collegeId: { userId, collegeId } },
-    select: { id: true },
-  });
+  let saved = false;
+  if (userId) {
+    const savedRow = await prisma.savedCollege.findUnique({
+      where: { userId_collegeId: { userId, collegeId } },
+      select: { id: true },
+    });
+    saved = Boolean(savedRow);
+  }
 
   return {
     collegeId,
@@ -221,7 +226,7 @@ export async function getMatchView(collegeId: string): Promise<MatchView | null>
     classificationLabel: matchLabelForClassification(result.classification),
     engineVersion: result.engineVersion,
     isDemo: inputs.college.isDemoData,
-    saved: Boolean(savedRow),
+    saved,
     dimensions: toDimensionViews(result),
   };
 }
@@ -244,6 +249,7 @@ export async function getMatchScoresForUser(userId: string) {
  */
 export async function getMatchHistory(collegeId: string) {
   const userId = await getCurrentUserId();
+  if (!userId) return [];
   return prisma.matchHistory.findMany({
     where: { userId, collegeId },
     orderBy: { computedAt: "asc" },

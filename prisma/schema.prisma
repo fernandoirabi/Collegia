@@ -133,18 +133,30 @@ enum DataVerificationStatus {
   VERIFIED
 }
 
+// Admissions testing policy for a college. `UNKNOWN` means no reliable
+// institutional policy is tracked; the additive Testing Context layer
+// reports UNKNOWN rather than claiming a college is test-optional
+// without verified data.
+enum TestingPolicy {
+  TEST_OPTIONAL
+  TEST_FLEXIBLE
+  TEST_REQUIRED
+  UNKNOWN
+}
+
 // ============================================================
 // USERS & STUDENT DATA
 // ============================================================
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  firstName String?
-  lastName  String?
-  role      UserRole @default(STUDENT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  firstName    String?
+  lastName     String?
+  role         UserRole @default(STUDENT)
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   profile        StudentProfile?
   preferences    CollegePreference?
@@ -443,6 +455,11 @@ model College {
   satRangeMax    Int?
   actRangeMin    Int?
   actRangeMax    Int?
+
+  // Admissions testing policy. null = no reliable policy tracked; the
+  // runtime resolves null to UNKNOWN and never claims a college is
+  // test-optional without verified data.
+  testingPolicy  TestingPolicy?
 
   // Academics
   graduationRate       Float?

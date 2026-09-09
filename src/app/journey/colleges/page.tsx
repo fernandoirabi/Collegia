@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Search, Bookmark } from "lucide-react";
 import { getSavedColleges } from "@/lib/services/saved-college.service";
 import { analyzeCollegeList } from "@/lib/services/college-list.service";
+import { requireUserIdFromPage } from "@/lib/auth/require-auth";
 import SavedCollegesList from "@/components/colleges/SavedCollegesList";
 import styles from "./page.module.css";
 
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function JourneyCollegesPage() {
+  await requireUserIdFromPage();
   const [saved, listAnalysis] = await Promise.all([
     getSavedColleges(),
     analyzeCollegeList(),

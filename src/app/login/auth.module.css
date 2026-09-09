@@ -1,0 +1,70 @@
+.main {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: var(--space-16);
+  padding-bottom: var(--space-16);
+}
+
+.card {
+  padding: var(--space-10);
+  box-shadow: 0 1px 3px rgba(15, 15, 14, 0.06), 0 1px 2px rgba(15, 15, 14, 0.04);
+}
+
+.header {
+  margin-bottom: var(--space-6);
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+
+.sub {
+  color: var(--color-ink-muted);
+  font-size: 15px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-top: var(--space-3);
+}
+
+.submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--space-3);
+}
+
+.error {
+  font-size: 13px;
+  color: var(--color-coral);
+  background: var(--color-coral-light);
+  border-radius: 8px;
+  padding: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.footnote {
+  margin-top: var(--space-5);
+  font-size: 14px;
+  color: var(--color-ink-muted);
+  text-align: center;
+}
+
+.link {
+  color: var(--color-primary);
+  font-weight: 600;
+}

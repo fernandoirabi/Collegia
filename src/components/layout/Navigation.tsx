@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { logoutAction } from "@/actions/auth";
 import { Search, Menu, X, ChevronDown } from "lucide-react";
 import styles from "./Navigation.module.css";
 
@@ -40,6 +42,18 @@ export default function Navigation() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
+  const isAuthenticated = status === "authenticated";
+  const firstName = session?.user?.name?.split(" ")[0] ?? "Account";
+  const initial = (session?.user?.name?.trim()[0] ?? "A").toUpperCase();
+
+  const handleLogout = async () => {
+    await logoutAction();
+    router.push("/");
+    router.refresh();
+  };
 
   const isHomepage = pathname === "/";
 
@@ -117,12 +131,26 @@ export default function Navigation() {
             <button className={styles.searchBtn} aria-label="Search">
               <Search size={18} />
             </button>
-            <Link href="/profile" className={styles.signIn}>
-              Sign In
-            </Link>
-            <Link href="/discover/match" className={`btn btn-primary btn-sm ${styles.cta}`}>
-              Get Started
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link href="/profile" className={styles.account} aria-label="My Profile">
+                  <span className={styles.avatar}>{initial}</span>
+                  <span className={styles.accountName}>{firstName}</span>
+                </Link>
+                <button className={styles.signOut} onClick={handleLogout}>
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className={styles.signIn}>
+                  Sign In
+                </Link>
+                <Link href="/signup" className={`btn btn-primary btn-sm ${styles.cta}`}>
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -160,12 +188,41 @@ export default function Navigation() {
           </div>
 
           <div className={styles.mobileActions}>
-            <Link href="/profile" className="btn btn-secondary" style={{width:"100%", justifyContent:"center"}}>
-              Sign In
-            </Link>
-            <Link href="/discover/match" className="btn btn-primary" style={{width:"100%", justifyContent:"center"}}>
-              Get Started — It&apos;s Free
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="btn btn-secondary"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  My Profile
+                </Link>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: "100%", justifyContent: "center" }}
+                  onClick={handleLogout}
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="btn btn-secondary"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="btn btn-primary"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  Get Started — It&apos;s Free
+                </Link>
+              </>
+            )}
           </div>
 
           <div className={styles.mobileBadge}>

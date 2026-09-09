@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { getCurrentUserId } from "@/lib/auth/current-user";
+import { getCurrentUserId, requireCurrentUserId } from "@/lib/auth/current-user";
 import type { Prisma } from "@prisma/client";
 
 const REGION_ENUM_TO_LABEL: Record<string, string> = {
@@ -59,6 +59,7 @@ export interface StudentProfileView {
 
 export async function getStudentProfile(): Promise<StudentProfileView | null> {
   const userId = await getCurrentUserId();
+  if (!userId) return null;
 
   const [profile, preferences, financialAid, international] = await Promise.all([
     prisma.studentProfile.findUnique({ where: { userId } }),
@@ -149,7 +150,7 @@ export interface UpdateProfileInput {
 }
 
 export async function createStudentProfile(input: UpdateProfileInput): Promise<StudentProfileView> {
-  const userId = await getCurrentUserId();
+  const userId = await requireCurrentUserId();
 
   const profileData: Prisma.StudentProfileCreateInput = {
     user: { connect: { id: userId } },
@@ -168,7 +169,7 @@ export async function createStudentProfile(input: UpdateProfileInput): Promise<S
 }
 
 export async function updateStudentProfile(input: UpdateProfileInput): Promise<StudentProfileView> {
-  const userId = await getCurrentUserId();
+  const userId = await requireCurrentUserId();
 
   const profile = await prisma.studentProfile.findUnique({ where: { userId } });
   if (!profile) return createStudentProfile(input);

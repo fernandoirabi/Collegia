@@ -3,6 +3,7 @@ import Image from "next/image";
 import ScrollReveal from "@/components/ui/ScrollReveal";
 import { MapPin, ArrowRight } from "lucide-react";
 import { colleges } from "@/data";
+import { formatCostK, formatPercent } from "@/lib/format";
 import styles from "./CollegeExplorer.module.css";
 
 const filters = ["Engineering", "Business", "Medicine", "Arts", "Computer Science", "Law"];
@@ -27,6 +28,9 @@ export default function CollegeExplorer() {
                 Over 4,000 colleges across the United States. Filter by
                 major, location, cost, campus life, and more. Every school has
                 a place for the right student.
+              </p>
+              <p className={styles.demoNote}>
+                Illustrative demo cards below — stats and match badges load live after launch.
               </p>
               <div className={styles.filterRow}>
                 {filters.map((f, i) => (
@@ -55,10 +59,6 @@ export default function CollegeExplorer() {
                 <div className={styles.largeOverlay} />
               </div>
               <div className={styles.largeCardContent}>
-                <span className="badge badge-strong">
-                  <span className={styles.dotGreen} />
-                  Strong Match
-                </span>
                 <div>
                   <h3 className={styles.largeName}>{featured[0]?.name}</h3>
                   <p className={styles.largeLocation}>
@@ -68,17 +68,17 @@ export default function CollegeExplorer() {
                 </div>
                 <div className={styles.largeStats}>
                   <div className={styles.largeStat}>
-                    <span>{featured[0]?.admissions.acceptanceRate}%</span>
+                    <span>{formatPercent(featured[0]?.admissions.acceptanceRate)}</span>
                     <span>Accept.</span>
                   </div>
                   <div className={styles.largeStatDivider} />
                   <div className={styles.largeStat}>
-                    <span>${(featured[0]?.cost.tuitionInternational / 1000).toFixed(0)}K</span>
+                    <span>{formatCostK(featured[0]?.cost.tuitionInternational)}</span>
                     <span>Tuition</span>
                   </div>
                   <div className={styles.largeStatDivider} />
                   <div className={styles.largeStat}>
-                    <span>{featured[0]?.international.internationalPercentage}%</span>
+                    <span>{formatPercent(featured[0]?.international.internationalPercentage)}</span>
                     <span>Intl.</span>
                   </div>
                 </div>
@@ -110,11 +110,9 @@ export default function CollegeExplorer() {
                       </p>
                     </div>
                     <div className={styles.smallFooter}>
-                      <span className={`badge ${i === 0 ? "badge-target" : "badge-reach"}`}>
-                        {i === 0 ? "Target" : "Reach"}
-                      </span>
+                      <span className={styles.smallType}>{college.type}</span>
                       <span className={styles.smallStat}>
-                        {college.admissions.acceptanceRate}% accept.
+                        {formatPercent(college.admissions.acceptanceRate)} accept.
                       </span>
                     </div>
                   </div>

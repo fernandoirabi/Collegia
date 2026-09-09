@@ -166,7 +166,11 @@ function clamp(n: number, min: number, max: number): number {
 }
 
 function compatibleGpaScales(student: number | null, college: number | null): boolean {
-  return Math.abs((student ?? 4.0) - (college ?? 4.0)) < 0.001;
+  // Never assume a scale: if either GPA scale is genuinely unknown we cannot
+  // reliably claim the two GPAs are comparable, so treat them as unknown
+  // rather than silently defaulting both to 4.0.
+  if (student == null || college == null) return false;
+  return Math.abs(student - college) < 0.001;
 }
 
 function fmtGpa(n: number): string {

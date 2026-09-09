@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { getCurrentUserId } from "@/lib/auth/current-user";
+import { getCurrentUserId, requireCurrentUserId } from "@/lib/auth/current-user";
 import { getCollegeById, mapCollegeToUI } from "@/lib/services/college.service";
 import { computeAndPersistMatch, type MatchDimensionView } from "@/lib/services/match-score.service";
 import type { College } from "@/types";
@@ -15,6 +15,7 @@ export interface SavedCollegeView {
 
 export async function getSavedColleges(): Promise<SavedCollegeView[]> {
   const userId = await getCurrentUserId();
+  if (!userId) return [];
 
   const [rows, matchScores] = await Promise.all([
     prisma.savedCollege.findMany({
@@ -65,6 +66,7 @@ export async function getSavedColleges(): Promise<SavedCollegeView[]> {
 
 export async function getSavedCollegeIds(): Promise<string[]> {
   const userId = await getCurrentUserId();
+  if (!userId) return [];
   const rows = await prisma.savedCollege.findMany({
     where: { userId },
     select: { collegeId: true },
@@ -74,6 +76,7 @@ export async function getSavedCollegeIds(): Promise<string[]> {
 
 export async function isCollegeSaved(collegeId: string): Promise<boolean> {
   const userId = await getCurrentUserId();
+  if (!userId) return false;
   const row = await prisma.savedCollege.findUnique({
     where: { userId_collegeId: { userId, collegeId } },
     select: { id: true },
@@ -82,7 +85,7 @@ export async function isCollegeSaved(collegeId: string): Promise<boolean> {
 }
 
 export async function saveCollege(collegeId: string): Promise<void> {
-  const userId = await getCurrentUserId();
+  const userId = await requireCurrentUserId();
   const college = await getCollegeById(collegeId);
   if (!college) {
     throw new Error("COLLEGE_NOT_FOUND");
@@ -98,7 +101,7 @@ export async function saveCollege(collegeId: string): Promise<void> {
 }
 
 export async function removeSavedCollege(collegeId: string): Promise<void> {
-  const userId = await getCurrentUserId();
+  const userId = await requireCurrentUserId();
   await prisma.savedCollege.deleteMany({
     where: { userId, collegeId },
   });
@@ -106,5 +109,6 @@ export async function removeSavedCollege(collegeId: string): Promise<void> {
 
 export async function countSavedColleges(): Promise<number> {
   const userId = await getCurrentUserId();
+  if (!userId) return 0;
   return prisma.savedCollege.count({ where: { userId } });
 }

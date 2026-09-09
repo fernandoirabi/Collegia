@@ -11,7 +11,7 @@
 // ============================================================
 
 import { prisma } from "@/lib/db/prisma";
-import { getCurrentUserId } from "@/lib/auth/current-user";
+import { getCurrentUserId, requireCurrentUserId } from "@/lib/auth/current-user";
 import { getStudentProfile } from "@/lib/services/profile.service";
 import { collegeInclude, type CollegeWithRelations } from "@/lib/services/college.service";
 import {
@@ -186,6 +186,7 @@ export interface RecommendationView {
 
 export async function generateRecommendations(): Promise<RecommendationView[]> {
   const userId = await getCurrentUserId();
+  if (!userId) return [];
   const profile = await getStudentProfile();
   if (!profile) return [];
 
@@ -257,6 +258,7 @@ export async function generateRecommendations(): Promise<RecommendationView[]> {
 
 export async function getRecommendations(): Promise<RecommendationView[]> {
   const userId = await getCurrentUserId();
+  if (!userId) return [];
   const rows = await prisma.recommendation.findMany({
     where: { userId, status: "OPEN" },
     include: { college: { select: { name: true } } },
@@ -283,7 +285,7 @@ export async function updateRecommendationStatus(
   id: string,
   status: RecommendationStatus
 ): Promise<boolean> {
-  const userId = await getCurrentUserId();
+  const userId = await requireCurrentUserId();
   const existing = await prisma.recommendation.findFirst({ where: { id, userId } });
   if (!existing) return false;
   await prisma.recommendation.update({

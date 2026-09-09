@@ -3,13 +3,20 @@
 import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { ArrowRight, Sparkles, ChevronRight, Check, Plus, ChevronDown, MapPin } from "lucide-react";
+import { ArrowRight, Sparkles, ChevronRight, Check, Plus, ChevronDown, MapPin, Circle } from "lucide-react";
 import Link from "next/link";
-import { getBalancedCollegeListAction } from "@/actions/match-results";
 import { saveCollegeAction } from "@/actions/saved-colleges";
 import { updateStudentPreferencesAction, updateStudentProfileAction } from "@/actions/profile";
+import { createGoalAction } from "@/actions/goals";
 import CollegeImage from "@/components/ui/CollegeImage";
 import type { BalancedCollegeListView, BalancedCollegeListItem } from "@/lib/services/college-list-builder.service";
+import {
+  MATCH_STAGES,
+  MATCH_CHECKLIST,
+  MATCH_STAGE_ORDER,
+  MATCH_STAGE_INDEX,
+} from "@/lib/match-stages";
+import type { MatchPipelineStage } from "@/lib/services/college-list-builder.service";
 import styles from "./page.module.css";
 
 const steps = [
@@ -37,16 +44,53 @@ const TIER_STYLE: Record<string, { dot: string; badge: string }> = {
   pathway: { dot: "var(--color-primary)", badge: "badge-target" },
 };
 
-const LOADING_MESSAGES = [
-  "Reading your academic profile...",
-  "Analyzing your GPA and test scores...",
-  "Comparing your academic fit...",
-  "Checking major compatibility...",
-  "Analyzing financial fit...",
-  "Comparing colleges across your preferences...",
-  "Building your personalized college list...",
-  "Almost there...",
+// Short, neutral label for the small "Testing" chip on a result card.
+// Contextual only — derived from Testing Context, never from the score.
+function testingChipLabel(tc: BalancedCollegeListItem["testingContext"]): string | null {
+  if (tc.isTestOptionalOpportunity) return "Test-Optional Opportunity";
+  if (tc.testingPolicy === "TEST_REQUIRED" && !tc.hasSubmittedTest) return "SAT Required";
+  if (tc.satStatus === "NOT_PROVIDED") return "SAT Not Provided";
+  return null;
+}
+
+// Maps a wizard "Your Goals" selection to a persisted improvement Goal so the
+// student's stated priorities survive into the IMPROVE journey instead of being
+// dropped after the matching run.
+const WIZARD_GOAL_TO_CATEGORY: Record<string, { category: "ACADEMIC" | "TESTING" | "EXTRACURRICULAR" | "APPLICATION" | "FINANCIAL"; title: string }> = {
+  "Strong academics": { category: "ACADEMIC", title: "Prioritize strong academics" },
+  "Career placement": { category: "ACADEMIC", title: "Prioritize career placement" },
+  "International community": { category: "APPLICATION", title: "Prioritize an international community" },
+  "Financial aid": { category: "FINANCIAL", title: "Prioritize financial aid" },
+  "Sports culture": { category: "EXTRACURRICULAR", title: "Prioritize sports culture" },
+  "Research opportunities": { category: "ACADEMIC", title: "Prioritize research opportunities" },
+  "Urban environment": { category: "APPLICATION", title: "Prioritize an urban environment" },
+  "Campus life": { category: "EXTRACURRICULAR", title: "Prioritize campus life" },
+};
+
+// Progress copy shown while the last pipeline stages stream in, so the
+// bar is never left visually frozen at a high percentage with no sign
+// of ongoing work.
+const PROFILE_MESSAGES = [
+  "Loading your saved academic profile...",
+  "Gathering the college catalog...",
+  "Reading your preferences and saved list...",
 ];
+
+const FINALIZING_MESSAGES = [
+  "Comparing your profile with the remaining colleges...",
+  "Ranking the best fits across every category...",
+  "Tying everything together — almost there...",
+];
+
+function messagesForStage(stage: MatchPipelineStage): string[] {
+  if (stage === "finalize") return FINALIZING_MESSAGES;
+  if (stage === "profile" || stage === "catalog") return PROFILE_MESSAGES;
+  return ["Crunching the numbers across every school..."];
+}
+
+// If no progress/result event arrives within this window, stop waiting and
+// show an error instead of leaving the loading UI frozen.
+const STALL_MS = 30000;
 
 function CollapsibleSection({
   id,
@@ -217,6 +261,12 @@ function ResultCard({
               </span>
             </div>
           )}
+          {testingChipLabel(r.testingContext) && (
+            <div className={styles.fitRow}>
+              <span className={styles.fitMetric}>Testing</span>
+              <span className={styles.testingNote}>{testingChipLabel(r.testingContext)}</span>
+            </div>
+          )}
           {!r.academicReality.gpa.available &&
             !r.academicReality.sat.available &&
             !r.academicReality.act.available && (
@@ -294,6 +344,12 @@ function ResultCard({
             {r.college.location.city}, {r.college.location.state}
           </p>
           <p className={styles.resultWhy}>{r.reasons.join(" ")}</p>
+          {testingChipLabel(r.testingContext) && (
+            <p className={styles.testingChip}>
+              <span className={styles.testingChipLabel}>Testing</span>
+              {testingChipLabel(r.testingContext)}
+            </p>
+          )}
           {r.academicReality.message && (
             <p className={styles.academicReality}>
               <span className={styles.academicTag}>{r.academicPositionLabel}</span>{" "}
@@ -358,9 +414,15 @@ export default function MatchPage() {
   const [list, setList] = useState<BalancedCollegeListView | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState<MatchPipelineStage>("profile");
+  const [gpaError, setGpaError] = useState<string | null>(null);
+  const [satError, setSatError] = useState<string | null>(null);
+  const [finalizingMsgIndex, setFinalizingMsgIndex] = useState(0);
   const submittingRef = useRef(false);
   const isMounted = useRef(true);
+  const activeAbortRef = useRef<AbortController | null>(null);
+  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLastStep = step === steps.length - 2;
   const isResults = step === steps.length - 1;
@@ -368,35 +430,149 @@ export default function MatchPage() {
   const runMatch = async () => {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    activeAbortRef.current?.abort();
+    activeAbortRef.current = new AbortController();
     setLoading(true);
     setError(null);
     setList(null);
-    setLoadingMsgIndex(0);
+    setProgress(0);
+    setStage("profile");
+
     try {
+      // Phase 0 — persist the wizard answers (real client->server work).
       const persistErr = await persistWizardProfile();
       if (persistErr) {
         if (isMounted.current) setError(persistErr);
+        submittingRef.current = false;
+        if (isMounted.current) setLoading(false);
         return;
       }
-      const res = await getBalancedCollegeListAction();
       if (!isMounted.current) return;
-      if (res.ok) setList(res.data);
-      else setError(res.error ?? "Unable to build your college list.");
+
+      // Phase 1+ — stream the actual match pipeline so the progress bar
+      // tracks real server stages instead of a fabricated percentage.
+      await streamMatch();
     } catch {
       if (isMounted.current) setError("Unable to compute your matches right now.");
     } finally {
       submittingRef.current = false;
+      activeAbortRef.current = null;
       if (isMounted.current) setLoading(false);
+    }
+  };
+
+  const streamMatch = async () => {
+    const signal = activeAbortRef.current?.signal;
+    const res = await fetch("/api/match/stream", { method: "POST", signal });
+    if (!res.ok || !res.body) {
+      throw new Error("stream_failed");
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let gotResult = false;
+    let serverErrorMessage: string | null = null;
+    let lastEventAt = Date.now();
+
+    // Watchdog: if no progress/result event arrives within STALL_MS, fail
+    // instead of leaving the UI frozen. Reset on every received event.
+    const armStall = () => {
+      if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+      const remaining = STALL_MS - (Date.now() - lastEventAt);
+      stallTimerRef.current = setTimeout(() => {
+        activeAbortRef.current?.abort();
+        if (isMounted.current) setError("The match took too long. Please try again.");
+      }, Math.max(0, remaining));
+    };
+
+    const applyStage = (stage: MatchPipelineStage) => {
+      if (!isMounted.current) return;
+      const meta = MATCH_STAGES[stage];
+      setStage(stage);
+      setProgress(meta.progress);
+    };
+
+    armStall();
+
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let sep: number;
+        while ((sep = buffer.indexOf("\n\n")) !== -1) {
+          const chunk = buffer.slice(0, sep);
+          buffer = buffer.slice(sep + 2);
+          const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+          if (!line) continue;
+          const data = line.slice(6);
+          let msg: { type: string; stage?: MatchPipelineStage; view?: BalancedCollegeListView; message?: string };
+          try {
+            msg = JSON.parse(data);
+          } catch {
+            continue;
+          }
+
+          if (msg.type === "stage" && msg.stage) {
+            lastEventAt = Date.now();
+            armStall();
+            applyStage(msg.stage);
+          } else if (msg.type === "result" && msg.view) {
+            gotResult = true;
+            if (isMounted.current) {
+              setList(msg.view!);
+              setProgress(100);
+              setStage("done");
+            }
+          } else if (msg.type === "error") {
+            serverErrorMessage = msg.message ?? null;
+            if (isMounted.current) setError(serverErrorMessage ?? "Unable to compute your matches right now.");
+          }
+        }
+      }
+
+      // Stream closed without ever delivering a result — surface an error
+      // rather than leaving a "0%" / partial loading state behind.
+      if (!gotResult && isMounted.current) {
+        setError(serverErrorMessage ?? "Unable to compute your matches right now.");
+      }
+    } catch (e) {
+      if (!signal?.aborted) throw e;
+    } finally {
+      if (stallTimerRef.current) {
+        clearTimeout(stallTimerRef.current);
+        stallTimerRef.current = null;
+      }
     }
   };
 
   const persistWizardProfile = async (): Promise<string | null> => {
     const academic: Record<string, unknown> = {};
-    if (answers.gpa) {
-      academic.gpa = Number(answers.gpa);
+
+    // GPA is required to build the match — always persist the (validated)
+    // value together with its 4.0 scale.
+    const gpaNum = Number(answers.gpa.trim());
+    if (!Number.isNaN(gpaNum)) {
+      academic.gpa = gpaNum;
       academic.gpaScale = 4.0;
     }
-    if (answers.sat) academic.satScore = Number(answers.sat);
+
+    // SAT is optional. Empty means "not provided" — explicitly clear to null
+    // so it is never treated as any fabricated score (e.g. 1600 or 0).
+    // An invalid (non-empty, out-of-range) value is NOT silently converted
+    // to null — it is surfaced as an error so the user can correct it.
+    if (answers.sat.trim()) {
+      const satNum = Number(answers.sat.trim());
+      if (!Number.isInteger(satNum) || satNum < 400 || satNum > 1600) {
+        return "SAT must be a whole number between 400 and 1600.";
+      }
+      academic.satScore = satNum;
+    } else {
+      academic.satScore = null;
+    }
+
     if (answers.major) academic.intendedMajor = answers.major;
 
     const prefs: Record<string, unknown> = {};
@@ -412,11 +588,52 @@ export default function MatchPage() {
       const res = await updateStudentPreferencesAction(prefs);
       if (!res.ok) return res.error ?? "Unable to save your preferences.";
     }
+
+    // Persist the "Your Goals" selection into the IMPROVE journey so it isn't
+    // dropped after the matching run. Single-select by design; no-op if empty.
+    // idempotent:true prevents a duplicate goal every time the wizard runs.
+    const goalMapping = answers.internationalAid ? WIZARD_GOAL_TO_CATEGORY[answers.internationalAid] : null;
+    if (goalMapping) {
+      const goalRes = await createGoalAction({
+        title: goalMapping.title,
+        category: goalMapping.category,
+        priority: "MEDIUM",
+        description: "Set from your College Match preferences.",
+        idempotent: true,
+      });
+      if (!goalRes.ok) return goalRes.error ?? "Unable to save your goals.";
+    }
+
     return null;
   };
 
   const handleNext = () => {
     if (isLastStep) {
+      // GPA is required to build the College Match. Block submission (with a
+      // clear message) before any request is sent, and never proceed with an
+      // empty / invalid GPA.
+      const rawGpa = answers.gpa.trim();
+      const gpaNum = Number(rawGpa);
+      if (!rawGpa || Number.isNaN(gpaNum) || gpaNum < 0 || gpaNum > 5) {
+        setGpaError("Please enter your GPA to build your College Match.");
+        setStep(0);
+        return;
+      }
+      setGpaError(null);
+
+      // SAT is optional. When provided it must be a whole number in the valid
+      // SAT scale (400–1600) — the same bounds the server schema enforces.
+      const rawSat = answers.sat.trim();
+      if (rawSat) {
+        const satNum = Number(rawSat);
+        if (!Number.isInteger(satNum) || satNum < 400 || satNum > 1600) {
+          setSatError("SAT must be a whole number between 400 and 1600.");
+          setStep(0);
+          return;
+        }
+      }
+      setSatError(null);
+
       // Enter the loading state immediately so the results area is
       // never mistaken for a frozen page. runMatch() persists the
       // wizard answers, then requests the match list.
@@ -434,17 +651,24 @@ export default function MatchPage() {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
+      activeAbortRef.current?.abort();
+      activeAbortRef.current = null;
+      if (stallTimerRef.current) {
+        clearTimeout(stallTimerRef.current);
+        stallTimerRef.current = null;
+      }
     };
   }, []);
 
   useEffect(() => {
     if (!loading) return;
-    setLoadingMsgIndex(0);
+    setFinalizingMsgIndex(0);
+    const msgs = messagesForStage(stage);
     const id = setInterval(() => {
-      setLoadingMsgIndex((i) => (i + 1) % LOADING_MESSAGES.length);
-    }, 1800);
+      setFinalizingMsgIndex((i) => (i + 1) % msgs.length);
+    }, 3000);
     return () => clearInterval(id);
-  }, [loading]);
+  }, [loading, stage]);
 
   return (
     <>
@@ -491,24 +715,50 @@ export default function MatchPage() {
 
                 <div className={styles.fields}>
                   <div className={styles.field}>
-                    <label className={styles.fieldLabel}>GPA (unweighted, out of 4.0)</label>
+                    <label className={styles.fieldLabel}>GPA (unweighted, out of 4.0) <span className="badge" aria-hidden="true">Required</span></label>
                     <input
                       className="input"
+                      type="text"
+                      inputMode="decimal"
+                      required
                       placeholder="e.g. 3.7"
                       value={answers.gpa}
-                      onChange={(e) => setAnswers({...answers, gpa: e.target.value})}
+                      onChange={(e) => {
+                        setAnswers({...answers, gpa: e.target.value});
+                        if (gpaError) setGpaError(null);
+                      }}
                       id="match-gpa"
+                      aria-invalid={gpaError ? true : undefined}
+                      aria-describedby={gpaError ? "match-gpa-error" : undefined}
                     />
+                    {gpaError && (
+                      <p className={styles.fieldError} id="match-gpa-error" role="alert">
+                        {gpaError}
+                      </p>
+                    )}
                   </div>
                   <div className={styles.field}>
-                    <label className={styles.fieldLabel}>SAT Score (optional)</label>
+                    <label className={styles.fieldLabel}>SAT — Optional</label>
                     <input
                       className="input"
+                      type="text"
+                      inputMode="numeric"
                       placeholder="e.g. 1350"
                       value={answers.sat}
-                      onChange={(e) => setAnswers({...answers, sat: e.target.value})}
+                      onChange={(e) => {
+                        setAnswers({...answers, sat: e.target.value});
+                        if (satError) setSatError(null);
+                      }}
                       id="match-sat"
+                      aria-invalid={satError ? true : undefined}
+                      aria-describedby={satError ? "match-sat-error" : undefined}
                     />
+                    {satError && (
+                      <p className={styles.fieldError} id="match-sat-error" role="alert">
+                        {satError}
+                      </p>
+                    )}
+                    <p className={styles.fieldHint}>Leave blank if you haven't taken the SAT (or don't want to submit it).</p>
                   </div>
                   <div className={styles.field}>
                     <label className={styles.fieldLabel}>Intended Major</label>
@@ -622,7 +872,7 @@ export default function MatchPage() {
                 {loading && (
                   <div className={styles.loadingPanel} role="status" aria-live="polite" aria-busy="true">
                     <p className={styles.loadingAnnounce}>
-                      Collegia is finding your personalized college matches.
+                      Building your College Match.
                     </p>
                     <div className={styles.loaderWrap} aria-hidden="true">
                       <div className={styles.loaderRing} />
@@ -632,21 +882,50 @@ export default function MatchPage() {
                         <Sparkles size={22} />
                       </div>
                     </div>
-                    <h3 className={styles.loadingTitle}>Finding your matches</h3>
-                    <p className={styles.loadingMsg}>{LOADING_MESSAGES[loadingMsgIndex]}</p>
-                    <div className={styles.loadingDots} aria-hidden="true">
-                      {[0, 1, 2].map((i) => (
-                        <span
-                          key={i}
-                          className={styles.loadingDot}
-                          style={{ animationDelay: `${i * 0.18}s` }}
+                    <h3 className={styles.loadingTitle}>Building your College Match</h3>
+
+                    <div className={styles.progressWrap} aria-hidden="true">
+                      <div className={styles.progressTrack}>
+                        <div
+                          className={styles.progressFill}
+                          style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                         />
-                      ))}
+                      </div>
+                      <div className={styles.progressRow}>
+                        <span className={styles.progressPct}>{Math.round(progress)}%</span>
+                        <span className={styles.progressStage}>{MATCH_STAGES[stage].label}</span>
+                      </div>
+                      <p className={styles.finalizingMsg} aria-hidden="true">
+                        {messagesForStage(stage)[finalizingMsgIndex] ?? ""}
+                      </p>
                     </div>
-                    <p className={styles.loadingHint}>
-                      We&apos;re analyzing your profile and comparing it with colleges across the
-                      Collegia database. This usually takes a few seconds.
-                    </p>
+
+                    <ul className={styles.checklist}>
+                      {MATCH_CHECKLIST.map((item, i) => {
+                        const itemIdx = MATCH_STAGE_INDEX[item.stage];
+                        const curIdx = MATCH_STAGE_INDEX[stage];
+                        const isDone = curIdx > itemIdx;
+                        const isActive = curIdx === itemIdx;
+                        return (
+                          <li
+                            key={item.stage}
+                            className={`${styles.checklistItem} ${
+                              isDone ? styles.checklistDone : isActive ? styles.checklistActive : ""
+                            }`}
+                            style={{ transitionDelay: `${i * 30}ms` }}
+                          >
+                            {isDone ? (
+                              <Check size={14} className={styles.checklistIcon} />
+                            ) : isActive ? (
+                              <span className={styles.checklistSpinner} aria-hidden="true" />
+                            ) : (
+                              <Circle size={14} className={styles.checklistIconPending} />
+                            )}
+                            <span>{item.label}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
                 )}
 
@@ -664,48 +943,71 @@ export default function MatchPage() {
 
                 {!loading && !error && list && (
                   <>
-                    <h3 className={styles.tierIntro}>
-                      Your college matches, organized by ambition. Scores measure
-                      <strong> fit</strong> — they are not chances of admission, and no list is a guarantee.
-                    </h3>
-                    {SECTIONS.map((section) => {
-                      const items = list[section.key];
-                      const style = TIER_STYLE[section.key];
-                      if (items.length === 0) {
-                        return (
-                          <section key={section.key} className={styles.tierSection} id={`tier-${section.key}`}>
-                            <div className={styles.tierHeader}>
-                              <h3 className={styles.tierTitle}>
-                                {section.icon} {section.label.toUpperCase()}
-                              </h3>
-                              <p className={styles.tierDesc}>{section.desc}</p>
-                              <p className={styles.tierShort}>{section.short}</p>
-                            </div>
-                            <p className={styles.tierEmpty} role="note">
-                              We couldn&apos;t honestly fill this tier with your current profile, so
-                              these slots are left open rather than padded with schools that
-                              wouldn&apos;t truly fit.
-                            </p>
-                          </section>
-                        );
-                      }
-                      return (
-                        <section key={section.key} className={styles.tierSection} id={`tier-${section.key}`}>
-                          <div className={styles.tierHeader}>
-                            <h3 className={styles.tierTitle}>
-                              {section.icon} {section.label.toUpperCase()}
-                            </h3>
-                            <p className={styles.tierDesc}>{section.desc}</p>
-                            <p className={styles.tierShort}>{section.short}</p>
-                          </div>
-                          <div className={styles.resultsList}>
-                            {items.map((r) => (
-                              <ResultCard key={r.college.id} r={r} style={style} />
-                            ))}
-                          </div>
-                        </section>
-                      );
-                    })}
+                    {list.total === 0 ? (
+                      <div className={styles.emptyState} role="status">
+                        <div className={styles.emptyIcon}>🔍</div>
+                        <h3 className={styles.emptyTitle}>No colleges matched your current profile.</h3>
+                        <p className={styles.emptyText}>
+                          We couldn&apos;t honestly place any colleges given the profile you entered.
+                          That doesn&apos;t mean nothing fits — try adjusting your preferences or
+                          academic profile, then run the match again. We&apos;ll never pad your list
+                          with schools that wouldn&apos;t truly fit.
+                        </p>
+                        <div className={styles.emptyActions}>
+                          <button className="btn btn-primary btn-sm" onClick={() => { setStep(1); setList(null); }} id="match-empty-prefs">
+                            Adjust Preferences
+                          </button>
+                          <Link href="/discover/search" className="btn btn-secondary btn-sm" id="match-empty-browse">
+                            Browse All Colleges
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 className={styles.tierIntro}>
+                          Your college matches, organized by ambition. Scores measure
+                          <strong> fit</strong> — they are not chances of admission, and no list is a guarantee.
+                        </h3>
+                        {SECTIONS.map((section) => {
+                          const items = list[section.key];
+                          const style = TIER_STYLE[section.key];
+                          if (items.length === 0) {
+                            return (
+                              <section key={section.key} className={styles.tierSection} id={`tier-${section.key}`}>
+                                <div className={styles.tierHeader}>
+                                  <h3 className={styles.tierTitle}>
+                                    {section.icon} {section.label.toUpperCase()}
+                                  </h3>
+                                  <p className={styles.tierDesc}>{section.desc}</p>
+                                  <p className={styles.tierShort}>{section.short}</p>
+                                </div>
+                                <p className={styles.tierEmpty} role="note">
+                                  We couldn&apos;t honestly fill this tier with your current profile, so
+                                  these slots are left open rather than padded with schools that
+                                  wouldn&apos;t truly fit.
+                                </p>
+                              </section>
+                            );
+                          }
+                          return (
+                            <section key={section.key} className={styles.tierSection} id={`tier-${section.key}`}>
+                              <div className={styles.tierHeader}>
+                                <h3 className={styles.tierTitle}>
+                                  {section.icon} {section.label.toUpperCase()}
+                                </h3>
+                                <p className={styles.tierDesc}>{section.desc}</p>
+                                <p className={styles.tierShort}>{section.short}</p>
+                              </div>
+                              <div className={styles.resultsList}>
+                                {items.map((r) => (
+                                  <ResultCard key={r.college.id} r={r} style={style} />
+                                ))}
+                              </div>
+                            </section>
+                          );
+                        })}
+                      </>
+                    )}
                   </>
                 )}
 

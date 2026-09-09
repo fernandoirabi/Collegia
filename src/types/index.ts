@@ -16,23 +16,23 @@ export interface College {
   size: "Small" | "Medium" | "Large";
   setting: "Urban" | "Suburban" | "Rural";
   admissions: {
-    acceptanceRate: number;
-    avgGPA: number;
-    satRange: [number, number];
-    actRange: [number, number];
+    acceptanceRate: number | null;
+    avgGPA: number | null;
+    satRange: [number | null, number | null];
+    actRange: [number | null, number | null];
     applicationDeadline: string;
     earlyDecisionDeadline?: string;
   };
   academics: {
     ranking?: number;
     strongPrograms: string[];
-    graduationRate: number;
+    graduationRate: number | null;
     studentFacultyRatio: string;
   };
   cost: {
-    tuitionInternational: number;
-    roomAndBoard: number;
-    totalCost: number;
+    tuitionInternational: number | null;
+    roomAndBoard: number | null;
+    totalCost: number | null;
   };
   financial: {
     meetsFullNeed: boolean;
@@ -40,8 +40,8 @@ export interface College {
     avgAidAmount?: number;
   };
   international: {
-    internationalPercentage: number;
-    countriesRepresented: number;
+    internationalPercentage: number | null;
+    countriesRepresented: number | null;
     i20Support: boolean;
     optAvailable: boolean;
   };
@@ -55,6 +55,8 @@ export interface College {
   coverImage: string;
   tags: string[];
   featured: boolean;
+  isDemoData: boolean;
+  verificationStatus: "DEMO" | "UNVERIFIED" | "PENDING_VERIFICATION" | "VERIFIED";
 }
 
 export interface StudentProfile {

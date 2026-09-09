@@ -205,12 +205,8 @@ export default async function SearchPage({ searchParams }: Props) {
                 </div>
               ) : (
                 <div className={styles.grid}>
-                  {filtered.map((college, i) => (
-                    <CollegeCard
-                      key={college.id}
-                      college={college}
-                      matchType={i % 3 === 0 ? "Strong Match" : i % 3 === 1 ? "Target" : "Reach"}
-                    />
+                  {filtered.map((college) => (
+                    <CollegeCard key={college.id} college={college} />
                   ))}
                 </div>
               )}

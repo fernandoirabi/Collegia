@@ -6,7 +6,7 @@
 // ============================================================
 
 import { prisma } from "@/lib/db/prisma";
-import { getCurrentUserId } from "@/lib/auth/current-user";
+import { getCurrentUserId, requireCurrentUserId } from "@/lib/auth/current-user";
 import type { GoalCategory, GoalPriority, GoalStatus } from "@prisma/client";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -72,6 +72,7 @@ function toView(g: {
 
 export async function getGoals(): Promise<GoalView[]> {
   const userId = await getCurrentUserId();
+  if (!userId) return [];
   const goals = await prisma.goal.findMany({
     where: { userId },
     orderBy: [{ status: "asc" }, { priority: "asc" }, { createdAt: "asc" }],
@@ -88,10 +89,23 @@ export interface CreateGoalInput {
   category?: GoalCategory;
   priority?: GoalPriority;
   dueDate?: Date | null;
+  /** When true, a goal with the same title+category already owned by this
+   *  user is returned instead of creating a duplicate. Used by ephemeral
+   *  sources (e.g. the Match wizard) that run repeatedly. */
+  idempotent?: boolean;
 }
 
 export async function createGoal(input: CreateGoalInput): Promise<GoalView> {
-  const userId = await getCurrentUserId();
+  const userId = await requireCurrentUserId();
+
+  if (input.idempotent) {
+    const existing = await prisma.goal.findFirst({
+      where: { userId, title: input.title, category: input.category ?? "ACADEMIC" },
+      orderBy: { createdAt: "asc" },
+    });
+    if (existing) return toView(existing);
+  }
+
   const goal = await prisma.goal.create({
     data: {
       userId,
@@ -121,7 +135,7 @@ export interface UpdateGoalInput {
 }
 
 export async function updateGoal(id: string, input: UpdateGoalInput): Promise<GoalView | null> {
-  const userId = await getCurrentUserId();
+  const userId = await requireCurrentUserId();
   const existing = await prisma.goal.findFirst({ where: { id, userId } });
   if (!existing) return null;
 
@@ -147,7 +161,7 @@ export async function completeGoal(id: string): Promise<GoalView | null> {
 }
 
 export async function deleteGoal(id: string): Promise<boolean> {
-  const userId = await getCurrentUserId();
+  const userId = await requireCurrentUserId();
   const existing = await prisma.goal.findFirst({ where: { id, userId } });
   if (!existing) return false;
   await prisma.goal.delete({ where: { id } });

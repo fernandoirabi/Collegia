@@ -3,12 +3,13 @@ import Navigation from "@/components/layout/Navigation";
 import Footer from "@/components/layout/Footer";
 import Link from "next/link";
 import { CheckCircle2, Circle, Clock, ArrowRight, Target, Bookmark, Sparkles } from "lucide-react";
-import { journeySteps, demoStudent } from "@/data";
+import { journeySteps } from "@/data";
 import { getStudentProfile } from "@/lib/services/profile.service";
 import { getSavedColleges } from "@/lib/services/saved-college.service";
 import { getGoals } from "@/lib/services/goals.service";
 import { analyzeCollegeList } from "@/lib/services/college-list.service";
 import { getRecommendations } from "@/lib/services/recommendation.service";
+import { requireUserIdFromPage } from "@/lib/auth/require-auth";
 import RecommendationsCard from "@/components/recommendations/RecommendationsCard";
 import { matchLabelForClassification } from "@/lib/services/match.service";
 import styles from "./page.module.css";
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function JourneyPage() {
+  await requireUserIdFromPage();
   const [profile, savedColleges, goals, listAnalysis, recommendations] = await Promise.all([
     getStudentProfile(),
     getSavedColleges(),
@@ -28,7 +30,7 @@ export default async function JourneyPage() {
     analyzeCollegeList(),
     getRecommendations(),
   ]);
-  const firstName = profile?.firstName ?? demoStudent.name.split(" ")[0];
+  const firstName = profile?.firstName ?? "Student";
   const savedCollegesView = savedColleges.slice(0, 3);
   const activeGoals = goals.filter(g => !g.completed);
   
@@ -135,12 +137,18 @@ export default async function JourneyPage() {
                       </div>
                       <div className={styles.goalInfo}>
                         <p className={styles.goalTitle}>{goal.title}</p>
-                        <div className="progress-bar-track" style={{marginTop: "8px", height: "6px"}}>
-                          <div className="progress-bar-fill" style={{width: `${goal.progress}%`}} />
-                        </div>
+                        {goal.target != null && goal.current != null ? (
+                          <div className="progress-bar-track" style={{marginTop: "8px", height: "6px"}}>
+                            <div className="progress-bar-fill" style={{width: `${goal.progress}%`}} />
+                          </div>
+                        ) : (
+                          <p className={styles.goalNoTarget}>No numeric target set</p>
+                        )}
                       </div>
                       <div className={styles.goalMeta}>
-                        <span className={styles.goalProgress}>{goal.current} / {goal.target}</span>
+                        <span className={styles.goalProgress}>
+                          {goal.current != null ? goal.current : "—"} / {goal.target != null ? goal.target : "—"}
+                        </span>
                         <span className={styles.goalUnit}>{goal.unit}</span>
                       </div>
                     </div>

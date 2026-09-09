@@ -93,6 +93,7 @@ export const createGoalSchema = z.object({
   unit: z.string().trim().max(20).nullable().optional(),
   category: z.enum(GOAL_CATEGORIES).optional(),
   priority: z.enum(GOAL_PRIORITIES).optional(),
+  idempotent: z.boolean().optional(),
 });
 
 export const updateGoalSchema = z.object({
@@ -108,4 +109,16 @@ export const goalIdSchema = z.object({
 export const recommendationStatusSchema = z.object({
   id: z.string().min(1).max(64),
   status: z.enum(["DONE", "DISMISSED"]),
+});
+
+export const signupSchema = z.object({
+  email: z.string().trim().email().max(160),
+  password: z.string().min(8).max(128),
+  firstName: z.string().trim().max(80).optional(),
+  lastName: z.string().trim().max(80).optional(),
+});
+
+export const loginSchema = z.object({
+  email: z.string().trim().email().max(160),
+  password: z.string().min(1).max(128),
 });

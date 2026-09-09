@@ -80,6 +80,13 @@ import {
 } from "@/lib/services/academic-relevance.service";
 import type { College } from "@/types";
 import type { MatchClassification } from "@prisma/client";
+import { PerfTrace } from "@/lib/perf";
+import {
+  computeTestingContext,
+  testOptionalPriorityRank,
+  type TestingContext,
+  type TestingPriorityRank,
+} from "@/lib/services/testing-context.service";
 
 // ============================================================
 // CONSTANTS
@@ -171,7 +178,11 @@ interface Tagged {
   position: number;
   academic: AcademicDistance;
   relevance: AcademicRelevance;
-}
+  /** Testing-friendly ordering key for a SAT-null student (null when a test
+   *  was submitted, meaning no re-prioritization). Lowest rank sorts first.
+   *  Affects only ordering WITHIN a tier — never the score/tier/weights. */
+  testingPriority: TestingPriorityRank | null;
+  }
 
 type TierBucket = ListTierKey | null;
 
@@ -228,6 +239,14 @@ function pickCount(candidates: Tagged[], count: number, ctx: PickContext): Tagge
     });
 
   pool.sort((a, b) => {
+    // For a SAT-null student, testing-friendliness is the PRIMARY ordering
+    // key within a tier: lower testingPriority = higher priority. Within the
+    // same priority group, the existing fit score + diversity bonus still
+    // decide. When the student submitted a test, testingPriority is null on
+    // both sides and ordering is unchanged (score + diversity only).
+    if (a.c.testingPriority !== b.c.testingPriority) {
+      return (a.c.testingPriority ?? 3) - (b.c.testingPriority ?? 3);
+    }
     const sa = a.c.result.score + a.bonus;
     const sb = b.c.result.score + b.bonus;
     if (sa !== sb) return sb - sa;
@@ -320,8 +339,11 @@ function improvementAction(
   }
 }
 
-function buildImprovements(profile: EngineProfile, college: EngineCollege): ImprovementItem[] {
-  const academic = computeAcademicDistance(profile, college);
+function buildImprovements(
+  profile: EngineProfile,
+  college: EngineCollege,
+  academic: AcademicDistance
+): ImprovementItem[] {
   const gaps = analyzeProfileGaps(profile, [college]);
   return gaps.slice(0, 2).map((gap) => ({
     title: gap.title,
@@ -329,6 +351,26 @@ function buildImprovements(profile: EngineProfile, college: EngineCollege): Impr
     potentialImpact: potentialImpactForGap(profile, college, gap.mutate),
   }));
 }
+
+// ============================================================
+// TESTING CONTEXT  (additive, never changes match output)
+// ============================================================
+//
+// Testing context & test-optional intelligence live in
+// testing-context.service.ts (computeTestingContext). It is an
+// isolated layer that may surface an extra *context* reason for
+// test-optional / test-flexible colleges and a small "Testing" chip in
+// the card UI. It only ever adds human-readable context — it never
+// alters the Match Score, tier, or ranking.
+//
+// The same source of truth also yields a testing-priority sorting key
+// (testOptionalPriorityRank) used ONLY to order colleges WITHIN an
+// already-assigned ambition tier for a student who submitted no test
+// score. Colleges are surfaced with reliable TEST_OPTIONAL / TEST_FLEXIBLE
+// policies ahead of UNKNOWN / TEST_REQUIRED ones; Match Score still ranks
+// within each group, and the Match Engine remains the source of truth for
+// tier and fit. Colleges without reliable institutional data resolve to
+// UNKNOWN and are never claimed to be test-optional.
 
 // ============================================================
 // BALANCED LIST BUILDER  (pure, deterministic)
@@ -393,6 +435,7 @@ export function buildBalancedList(
       position: positionFromSeverity(academic.severity),
       academic,
       relevance: computeAcademicRelevance(profile, college),
+      testingPriority: testOptionalPriorityRank(profile, college),
     };
   });
 
@@ -432,7 +475,7 @@ export function buildBalancedList(
       result: t.result,
       position: t.position,
       tier,
-      improvements: buildImprovements(profile, t.college),
+      improvements: buildImprovements(profile, t.college, t.academic),
       academicPositionBand: t.academic.combinedBand,
       academicPositionLabel: tier === "pathway" ? "Community College / Transfer Pathway" : t.academic.combinedLabel,
       academic: t.academic,
@@ -501,6 +544,9 @@ export interface BalancedCollegeListItem {
   mainRisk: string;
   safetyNote?: string;
   pathwayNote?: string;
+  /** Isolated Testing Context (SAT status + testing policy + optional
+   *  opportunity). Informative only — never derived from the match score. */
+  testingContext: TestingContext;
 }
 
 export interface BalancedCollegeListView {
@@ -518,17 +564,110 @@ export interface BalancedCollegeListView {
 export async function getBalancedCollegeList(
   options: ListBuilderOptions = {}
 ): Promise<BalancedCollegeListView> {
-  const profile = await getStudentProfile();
-  if (!profile) return emptyView();
+  return getBalancedCollegeListStaged(options, null);
+}
+
+// ============================================================
+// MATCH PIPELINE STAGES
+//
+// The College Match pipeline has a small number of real, measurable
+// boundaries. These drive the loading experience so the progress bar
+// reflects actual work instead of a purely artificial percentage:
+//
+//   profile  — loading the student's saved profile (several DB reads)
+//   catalog  — loading the full college catalog (one large DB read)
+//   matches  — running the deterministic Match engine over every college
+//   tiers    — assigning honest ambition tiers + building the balanced list
+//   finalize — mapping the selected colleges into the UI view + saved set
+//   done     — pipeline complete
+// ============================================================
+
+export type MatchPipelineStage =
+  | "profile"
+  | "catalog"
+  | "matches"
+  | "tiers"
+  | "finalize"
+  | "done";
+
+/**
+ * Raised when the profile cannot legally run the College Match — currently
+ * when no valid GPA is present. GPA is required; a missing GPA must never be
+ * silently treated as 4.0 or any other fabricated value.
+ */
+export class MatchValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MatchValidationError";
+  }
+}
+
+/**
+ * Returns a validation message if the provided GPA is missing, or null if the
+ * GPA is present and valid. GPA is mandatory for the College Match; a missing
+ * GPA must never be silently interpreted as 4.0 or any other value.
+ */
+export function matchGpaError(gpa: number | null | undefined): string | null {
+  if (gpa == null) {
+    return "Please enter your GPA to build your College Match.";
+  }
+  return null;
+}
+
+/**
+ * Optional per-stage callback fired as each real pipeline boundary
+ * completes. Used by the streaming API route to surface live progress
+ * to the loading UI. Results are identical to getBalancedCollegeList();
+ * the callback changes nothing about the computation.
+ */
+export async function getBalancedCollegeListStaged(
+  options: ListBuilderOptions = {},
+  onStage: ((stage: MatchPipelineStage) => void) | null
+): Promise<BalancedCollegeListView> {
+  const trace = new PerfTrace("college-list");
+
+  // CRITICAL: emit the first progress event BEFORE any potentially slow
+  // work. The client must never see a silent request that sits at 0%.
+  // "profile" is surfaced immediately; the heavy DB batch runs beneath it.
+  onStage?.("profile");
+
+  // These three database loads are mutually independent and were
+  // previously fetched serially (profile -> major -> catalog -> saved).
+  // Firing them together collapses several high-latency round trips into
+  // one parallel batch. The joined data is identical, so the result never
+  // changes.
+  const [profile, colleges, savedIds] = await Promise.all([
+    getStudentProfile(),
+    prisma.college.findMany({ include: collegeInclude }),
+    getSavedCollegeIds(),
+  ]);
+  trace.mark("loads");
+  onStage?.("catalog");
+
+  if (!profile) {
+    // No profile at all — treat as missing GPA (the mandatory field).
+    onStage?.("done");
+    throw new MatchValidationError(matchGpaError(null) as string);
+  }
+
+  const gpaValidation = matchGpaError(profile.gpa);
+  if (gpaValidation) {
+    // GPA is mandatory. Never run the engine as if the student had a 4.0;
+    // fail with a clear validation error instead.
+    onStage?.("done");
+    throw new MatchValidationError(gpaValidation);
+  }
 
   let intendedMajorCategory: string | null = null;
   if (profile.intendedMajor) {
     const major = await prisma.major.findUnique({ where: { name: profile.intendedMajor } });
     intendedMajorCategory = major?.category ?? null;
   }
+  trace.mark("major");
+  onStage?.("catalog");
+
   const engineProfile = profileToEngineProfile(profile, intendedMajorCategory);
 
-  const colleges = await prisma.college.findMany({ include: collegeInclude });
   const byId = new Map(colleges.map((c) => [c.id, c]));
   const catalog = colleges.map((c) => {
     const ec = collegeToEngineCollege(c as CollegeWithRelations);
@@ -537,15 +676,24 @@ export async function getBalancedCollegeList(
       result: computeMatch(engineProfile, ec),
     };
   });
+  trace.mark("matches");
+  onStage?.("matches");
 
   const list = buildBalancedList(engineProfile, catalog, options);
+  trace.mark("tiers");
+  onStage?.("tiers");
 
   // The saved set is fetched once so every result card can render its
   // Saved state without a per-college database request.
-  const savedIds = new Set(await getSavedCollegeIds());
+  const savedSet = new Set(savedIds);
+  trace.mark("finalize");
+  onStage?.("finalize");
 
   const toItem = (entry: BalancedListEntry): BalancedCollegeListItem => {
-    const reasons = [...new Set(entry.result.dimensions.flatMap((d) => d.reasons))].slice(0, 3);
+    const dimensionReasons = [...new Set(entry.result.dimensions.flatMap((d) => d.reasons))];
+    const testingContext = computeTestingContext(engineProfile, entry.college);
+    if (testingContext.reason) dimensionReasons.unshift(testingContext.reason);
+    const reasons = dimensionReasons.slice(0, 3);
     const prismaCollege = byId.get(entry.college.id);
     if (!prismaCollege) throw new Error(`Missing college catalog row for ${entry.college.id}`);
     return {
@@ -554,7 +702,7 @@ export async function getBalancedCollegeList(
       classification: entry.result.classification,
       classificationLabel: TIER_LABELS[entry.tier],
       engineVersion: entry.result.engineVersion,
-      saved: savedIds.has(entry.college.id),
+      saved: savedSet.has(entry.college.id),
       reasons: reasons.length > 0 ? reasons : ["Several aspects of your profile align with this college."],
       improvements: entry.improvements,
       academicPositionBand: entry.academicPositionBand,
@@ -567,6 +715,7 @@ export async function getBalancedCollegeList(
       mainRisk: entry.mainRisk,
       safetyNote: entry.safetyNote,
       pathwayNote: entry.pathwayNote,
+      testingContext,
     };
   };
 
@@ -595,21 +744,9 @@ export async function getBalancedCollegeList(
     engineVersion: list.dream[0]?.result.engineVersion ?? "collegia-match-v1",
   };
 
+  onStage?.("done");
+  trace.done();
+
   return view;
 }
-
-function emptyView(): BalancedCollegeListView {
-  return {
-    dream: [],
-    reach: [],
-    target: [],
-    likely: [],
-    safety: [],
-    pathway: [],
-    totals: { dream: 0, reach: 0, target: 0, likely: 0, safety: 0, pathway: 0 },
-    total: 0,
-    engineVersion: "collegia-match-v1",
-  };
-}
-
 export type { MatchClassification };

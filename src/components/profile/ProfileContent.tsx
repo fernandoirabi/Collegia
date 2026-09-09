@@ -301,9 +301,23 @@ function AcademicForm({ profile, saving, onSubmit }: FormProps) {
     classYear: profile.classYear != null ? String(profile.classYear) : "",
     intendedMajor: profile.intendedMajor ?? "",
   });
+  const [satError, setSatError] = useState<string | null>(null);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // SAT validation: optional, but when provided it must be a whole number
+    // in the valid SAT scale (400–1600). An invalid value is surfaced clearly
+    // instead of being silently converted to null or 0.
+    if (form.satScore.trim()) {
+      const satNum = Number(form.satScore.trim());
+      if (!Number.isInteger(satNum) || satNum < 400 || satNum > 1600) {
+        setSatError("SAT must be a whole number between 400 and 1600. Leave blank if you haven't taken it or don't want to submit it.");
+        return;
+      }
+    }
+    setSatError(null);
+
     onSubmit({
       firstName: form.firstName.trim() || null,
       lastName: form.lastName.trim() || null,
@@ -337,7 +351,24 @@ function AcademicForm({ profile, saving, onSubmit }: FormProps) {
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="pf-sat">SAT Score</label>
-          <input id="pf-sat" className="input" inputMode="numeric" placeholder="e.g. 1320" value={form.satScore} onChange={(e) => setForm({...form, satScore: e.target.value})} />
+          <input
+            id="pf-sat"
+            className="input"
+            inputMode="numeric"
+            placeholder="e.g. 1320"
+            value={form.satScore}
+            onChange={(e) => {
+              setForm({...form, satScore: e.target.value});
+              if (satError) setSatError(null);
+            }}
+            aria-invalid={satError ? true : undefined}
+            aria-describedby={satError ? "pf-sat-error" : undefined}
+          />
+          {satError && (
+            <p id="pf-sat-error" role="alert" style={{fontSize: 13, color: "var(--color-coral)", marginTop: "4px"}}>
+              {satError}
+            </p>
+          )}
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="pf-act">ACT Score</label>

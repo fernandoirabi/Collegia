@@ -4,6 +4,7 @@ import Footer from "@/components/layout/Footer";
 import Link from "next/link";
 import { ArrowLeft, Target, CheckCircle2, Circle } from "lucide-react";
 import { getGoals } from "@/lib/services/goals.service";
+import { requireUserIdFromPage } from "@/lib/auth/require-auth";
 import AddGoalButton from "@/components/goals/AddGoalButton";
 import GoalCardActions from "@/components/goals/GoalCardActions";
 import styles from "./page.module.css";
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function JourneyGoalsPage() {
+  await requireUserIdFromPage();
   const goals = await getGoals();
   const activeGoals = goals.filter(g => !g.completed);
   const completedGoals = goals.filter(g => g.completed);

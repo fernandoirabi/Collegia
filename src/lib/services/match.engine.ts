@@ -22,6 +22,7 @@
 
 import type { CollegeWithRelations } from "./college.service";
 import type { StudentProfileView } from "./profile.service";
+import type { TestingPolicy } from "./testing-context.service";
 import type {
   CollegeRegion,
   CampusSetting,
@@ -104,6 +105,11 @@ export interface EngineCollege {
   satRangeMax: number | null;
   actRangeMin: number | null;
   actRangeMax: number | null;
+  // Admissions testing policy. `null`/`undefined`/`UNKNOWN` means the policy
+  // is not tracked or not backed by reliable institutional data. Used only by
+  // the additive Testing Context layer to surface an optional context reason —
+  // it never changes scoring or tiers.
+  testingPolicy?: TestingPolicy | null;
   graduationRate?: number | null;
   estimatedTotalCost: number | null;
   internationalAidAvailable: boolean | null;
@@ -180,9 +186,11 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 function compatibleGpaScales(student: number | null, college: number | null): boolean {
-  const a = student ?? 4.0;
-  const b = college ?? 4.0;
-  return Math.abs(a - b) < 0.001;
+  // Never assume a scale: if either GPA scale is genuinely unknown we cannot
+  // reliably claim the two GPAs are comparable, so treat them as unknown
+  // rather than silently defaulting both to 4.0.
+  if (student == null || college == null) return false;
+  return Math.abs(student - college) < 0.001;
 }
 
 // ============================================================
@@ -755,6 +763,11 @@ export function collegeToEngineCollege(college: CollegeWithRelations): EngineCol
     satRangeMax: college.satRangeMax,
     actRangeMin: college.actRangeMin,
     actRangeMax: college.actRangeMax,
+    // Admissions testing policy. null -> UNKNOWN when no reliable policy is
+    // tracked. Used only by the additive Testing Context layer to surface an
+    // optional context reason and a SAT-null ordering bonus — it never
+    // changes scoring, tiers, weights, or the Match Score itself.
+    testingPolicy: college.testingPolicy ?? null,
     estimatedTotalCost:
       college.estimatedTotalCostInternational ??
       (college.tuitionInternational != null && college.roomAndBoard != null

@@ -1,37 +1,48 @@
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import type { User } from "@prisma/client";
 
 // ============================================================
-// CURRENT USER RESOLUTION
+// COLLEGIA — CURRENT USER RESOLUTION
 //
-// TEMPORARY: There is no authentication yet, so every request
-// is resolved to the seeded demo user. This isolates the
-// "who is logged in" concern so a real auth provider (NextAuth,
-// Supabase Auth, Clerk, ...) can replace this function without
-// touching the services below.
+// Resolves "who is signed in" from the real Auth.js session.
+// Previously this returned a hardcoded demo user for everyone;
+// now it reflects the authenticated user or null for guests.
+//
+//   getCurrentUserId()   -> string | null  (never throws)
+//   getCurrentUser()     -> User | null    (never throws)
+//   requireCurrentUserId -> string         (throws when guest)
+//
+// Services read with getCurrentUserId() (guests see empty/neutral
+// data); mutations and sensitive endpoints use requireCurrentUserId()
+// so an unauthenticated actor can never write or read someone else's
+// rows.
 // ============================================================
 
-export const DEMO_USER_EMAIL = "demo@collegia.app";
-
-let cachedDemoUserId: string | null = null;
-
-export async function getCurrentUserId(): Promise<string> {
-  if (cachedDemoUserId) return cachedDemoUserId;
-
-  let user = await prisma.user.findUnique({ where: { email: DEMO_USER_EMAIL } });
-
-  if (!user) {
-    user = await prisma.user.create({
-      data: { email: DEMO_USER_EMAIL, firstName: "Aiko", lastName: "Tanaka", role: "STUDENT" },
-    });
+export class AuthenticationError extends Error {
+  constructor(message = "You must be signed in to do that.") {
+    super(message);
+    this.name = "AuthenticationError";
   }
-
-  cachedDemoUserId = user.id;
-  return user.id;
 }
 
-export async function getCurrentUser(): Promise<User> {
-  const id = await getCurrentUserId();
-  const user = await prisma.user.findUniqueOrThrow({ where: { id } });
-  return user;
+export async function getCurrentUserId(): Promise<string | null> {
+  const session = await auth();
+  return session?.user?.id ?? null;
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+  return prisma.user.findUnique({ where: { id: userId } });
+}
+
+/**
+ * Returns the authenticated user id or throws AuthenticationError.
+ * Use this anywhere a mutation or sensitive read must be gated.
+ */
+export async function requireCurrentUserId(): Promise<string> {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new AuthenticationError();
+  return userId;
 }

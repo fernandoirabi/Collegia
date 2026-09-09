@@ -144,6 +144,13 @@
   padding-top: var(--space-2);
 }
 
+.goalsDisclaimer {
+  font-size: 11px;
+  color: var(--color-ink-faint);
+  margin-top: var(--space-1);
+  font-style: italic;
+}
+
 .goalCard {
   border-radius: var(--radius-lg);
   padding: var(--space-5);
