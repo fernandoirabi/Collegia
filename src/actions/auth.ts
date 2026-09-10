@@ -2,8 +2,8 @@
 
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
-import { signIn, signOut } from "@/auth";
-import { loginSchema, signupSchema } from "@/lib/validation/schemas";
+import { signOut } from "@/auth";
+import { signupSchema } from "@/lib/validation/schemas";
 
 export interface AuthActionResult {
   ok: boolean;
@@ -11,10 +11,12 @@ export interface AuthActionResult {
 }
 
 /**
- * Creates a new account (bcrypt-hashed password), a dedicated blank
- * student profile, and signs the user in. Emails are unique, so an
- * existing address is rejected — the row that a user logs into is
- * always their own.
+ * Creates a new account (bcrypt-hashed password) and the dedicated
+ * blank student profiles. The session itself is established by the
+ * client through the Auth.js HTTP credentials flow
+ * (POST /api/auth/callback/credentials) so the browser receives the
+ * session cookie. Emails are unique, so an existing address is
+ * rejected — the row a user logs into is always their own.
  */
 export async function signupAction(rawInput: unknown): Promise<AuthActionResult> {
   const parsed = signupSchema.safeParse(rawInput);
@@ -46,40 +48,6 @@ export async function signupAction(rawInput: unknown): Promise<AuthActionResult>
     await prisma.internationalProfile.create({ data: { userId: user.id } });
   } catch {
     return { ok: false, error: "Unable to create your account right now. Please try again." };
-  }
-
-  try {
-    await signIn("credentials", {
-      email: parsed.data.email,
-      password: parsed.data.password,
-      redirect: false,
-    });
-  } catch {
-    return { ok: false, error: "Account created. Please sign in with your email and password." };
-  }
-
-  return { ok: true };
-}
-
-/**
- * Signs in an existing account. Uses `redirect: false` so the caller
- * controls navigation; a failed login never exposes whether the email
- * or the password was wrong.
- */
-export async function loginAction(rawInput: unknown): Promise<AuthActionResult> {
-  const parsed = loginSchema.safeParse(rawInput);
-  if (!parsed.success) {
-    return { ok: false, error: "Enter your email and password to sign in." };
-  }
-
-  try {
-    await signIn("credentials", {
-      email: parsed.data.email,
-      password: parsed.data.password,
-      redirect: false,
-    });
-  } catch {
-    return { ok: false, error: "Invalid email or password." };
   }
 
   return { ok: true };
