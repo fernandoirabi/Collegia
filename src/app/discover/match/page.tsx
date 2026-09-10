@@ -17,6 +17,7 @@ import {
   MATCH_STAGE_INDEX,
 } from "@/lib/match-stages";
 import type { MatchPipelineStage } from "@/lib/services/college-list-builder.service";
+import { parseGpa, gpaScaleForType, GPA_LABELS, GPA_TYPES, type GpaType } from "@/lib/gpa";
 import styles from "./page.module.css";
 
 const steps = [
@@ -403,6 +404,7 @@ export default function MatchPage() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({
     gpa: "",
+    gpaType: "UNWEIGHTED" as GpaType,
     sat: "",
     major: "",
     budget: "",
@@ -552,11 +554,15 @@ export default function MatchPage() {
     const academic: Record<string, unknown> = {};
 
     // GPA is required to build the match — always persist the (validated)
-    // value together with its 4.0 scale.
-    const gpaNum = Number(answers.gpa.trim());
-    if (!Number.isNaN(gpaNum)) {
-      academic.gpa = gpaNum;
-      academic.gpaScale = 4.0;
+    // value together with its Unweighted/Weighted scale so the Match Engine
+    // can compare it only against colleges on the same scale.
+    const gpaResult = parseGpa(answers.gpa, answers.gpaType);
+    if (!gpaResult.valid) {
+      return gpaResult.error ?? "Please enter a valid GPA.";
+    }
+    if (gpaResult.value != null) {
+      academic.gpa = gpaResult.value;
+      academic.gpaScale = gpaScaleForType(answers.gpaType);
     }
 
     // SAT is optional. Empty means "not provided" — explicitly clear to null
@@ -611,11 +617,17 @@ export default function MatchPage() {
     if (isLastStep) {
       // GPA is required to build the College Match. Block submission (with a
       // clear message) before any request is sent, and never proceed with an
-      // empty / invalid GPA.
+      // empty / invalid GPA. A GPA above the selected scale's maximum is
+      // rejected on the client too — it is never clamped or re-normalized.
       const rawGpa = answers.gpa.trim();
-      const gpaNum = Number(rawGpa);
-      if (!rawGpa || Number.isNaN(gpaNum) || gpaNum < 0 || gpaNum > 5) {
+      if (!rawGpa) {
         setGpaError("Please enter your GPA to build your College Match.");
+        setStep(0);
+        return;
+      }
+      const gpaResult = parseGpa(rawGpa, answers.gpaType);
+      if (!gpaResult.valid) {
+        setGpaError(gpaResult.error ?? "Please enter a valid GPA.");
         setStep(0);
         return;
       }
@@ -715,7 +727,20 @@ export default function MatchPage() {
 
                 <div className={styles.fields}>
                   <div className={styles.field}>
-                    <label className={styles.fieldLabel}>GPA (unweighted, out of 4.0) <span className="badge" aria-hidden="true">Required</span></label>
+                    <label className={styles.fieldLabel}>GPA <span className="badge" aria-hidden="true">Required</span></label>
+                    <div className={styles.radioGroup}>
+                      {GPA_TYPES.map((t) => (
+                        <button
+                          key={t.value}
+                          type="button"
+                          className={`chip ${answers.gpaType === t.value ? "active" : ""}`}
+                          onClick={() => setAnswers({...answers, gpaType: t.value})}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p style={{fontSize: 12, color: "var(--color-ink-muted)", marginTop: "4px", marginBottom: "8px"}}>{GPA_LABELS[answers.gpaType]}</p>
                     <input
                       className="input"
                       type="text"

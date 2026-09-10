@@ -21,8 +21,8 @@ export const profileUpdateSchema = z.object({
   isInternationalStudent: z.boolean().optional(),
 
   // Academics
-  gpa: z.number().min(0).max(5).nullable().optional(),
-  gpaScale: z.number().min(1).max(5).nullable().optional(),
+  gpa: z.number().min(0).nullable().optional(),
+  gpaScale: z.number().refine((s) => s === 4 || s === 5, "GPA scale must be 4.0 (Unweighted) or 5.0 (Weighted)").nullable().optional(),
   satScore: z.number().int().min(400).max(1600).nullable().optional(),
   actScore: z.number().int().min(1).max(36).nullable().optional(),
   classYear: z.number().int().min(2000).max(2100).nullable().optional(),
@@ -31,6 +31,22 @@ export const profileUpdateSchema = z.object({
   // Application
   applicationYear: z.number().int().min(2024).max(2100).nullable().optional(),
   intendedEnrollmentYear: z.number().int().min(2025).max(2100).nullable().optional(),
+}).superRefine((data, ctx) => {
+  // A provided GPA must never exceed its declared scale. Unweighted (4.0)
+  // caps at 4.0; Weighted (5.0) caps at 5.0. The value is rejected, never
+  // clamped or re-normalized. When GPA or scale is absent there is nothing
+  // to compare and we stay valid.
+  if (data.gpa == null || data.gpaScale == null) return;
+  if (data.gpa > data.gpaScale) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["gpa"],
+      message:
+        data.gpaScale === 4
+          ? "GPA on a 4.0 (Unweighted) scale cannot exceed 4.0."
+          : "GPA on a 5.0 (Weighted) scale cannot exceed 5.0.",
+    });
+  }
 });
 
 export const preferencesUpdateSchema = z.object({

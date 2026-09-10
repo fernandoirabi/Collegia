@@ -10,6 +10,7 @@ import {
   updateStudentProfileAction,
 } from "@/actions/profile";
 import type { StudentProfileView } from "@/lib/services/profile.service";
+import { parseGpa, gpaScaleForType, GPA_LABELS, GPA_TYPES, type GpaType } from "@/lib/gpa";
 import styles from "@/app/profile/page.module.css";
 
 type EditingSection = "academic" | "preferences" | "international" | null;
@@ -138,7 +139,9 @@ export default function ProfileContent({ profile }: { profile: StudentProfileVie
             ) : (
               <div className={styles.grid}>
                 <div className={styles.field}>
-                  <p className={styles.label}>Cumulative GPA (Unweighted)</p>
+                  <p className={styles.label}>
+                    Cumulative GPA ({profile.gpaScale === 5 ? "Weighted" : "Unweighted"})
+                  </p>
                   <p className={styles.value}>{profile.gpa != null ? `${profile.gpa} / ${profile.gpaScale ?? 4.0}` : "—"}</p>
                 </div>
                 <div className={styles.field}>
@@ -295,16 +298,28 @@ function AcademicForm({ profile, saving, onSubmit }: FormProps) {
     firstName: profile.firstName ?? "",
     lastName: profile.lastName ?? "",
     gpa: profile.gpa != null ? String(profile.gpa) : "",
-    gpaScale: profile.gpaScale != null ? String(profile.gpaScale) : "4.0",
+    gpaType: (profile.gpaScale === 5 ? "WEIGHTED" : "UNWEIGHTED") as GpaType,
     satScore: profile.satScore != null ? String(profile.satScore) : "",
     actScore: profile.actScore != null ? String(profile.actScore) : "",
     classYear: profile.classYear != null ? String(profile.classYear) : "",
     intendedMajor: profile.intendedMajor ?? "",
   });
   const [satError, setSatError] = useState<string | null>(null);
+  const [gpaError, setGpaError] = useState<string | null>(null);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // GPA validation: optional (empty = "not reported", kept as null), but
+    // when provided it must be non-negative and within the selected scale's
+    // maximum — 4.0 for Unweighted, 5.0 for Weighted. An out-of-range value
+    // is surfaced clearly, never clamped or re-normalized.
+    const gpaResult = parseGpa(form.gpa, form.gpaType);
+    if (!gpaResult.valid) {
+      setGpaError(gpaResult.error ?? "Please enter a valid GPA.");
+      return;
+    }
+    setGpaError(null);
 
     // SAT validation: optional, but when provided it must be a whole number
     // in the valid SAT scale (400–1600). An invalid value is surfaced clearly
@@ -321,8 +336,8 @@ function AcademicForm({ profile, saving, onSubmit }: FormProps) {
     onSubmit({
       firstName: form.firstName.trim() || null,
       lastName: form.lastName.trim() || null,
-      gpa: form.gpa ? Number(form.gpa) : null,
-      gpaScale: form.gpaScale ? Number(form.gpaScale) : null,
+      gpa: gpaResult.value,
+      gpaScale: gpaScaleForType(form.gpaType),
       satScore: form.satScore ? Number(form.satScore) : null,
       actScore: form.actScore ? Number(form.actScore) : null,
       classYear: form.classYear ? Number(form.classYear) : null,
@@ -342,12 +357,46 @@ function AcademicForm({ profile, saving, onSubmit }: FormProps) {
           <input id="pf-last" className="input" value={form.lastName} onChange={(e) => setForm({...form, lastName: e.target.value})} />
         </div>
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="pf-gpa">GPA</label>
-          <input id="pf-gpa" className="input" inputMode="decimal" placeholder="e.g. 3.6" value={form.gpa} onChange={(e) => setForm({...form, gpa: e.target.value})} />
+          <p className={styles.label}>GPA Scale</p>
+          <div className={styles.chipRow}>
+            {GPA_TYPES.map((t) => (
+              <button
+                type="button"
+                key={t.value}
+                className={`chip ${form.gpaType === t.value ? "active" : ""}`}
+                onClick={() => {
+                  setForm({...form, gpaType: t.value});
+                  if (gpaError) setGpaError(null);
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <p style={{fontSize: 12, color: "var(--color-ink-muted)", marginTop: "4px", marginBottom: "8px"}}>
+            {GPA_LABELS[form.gpaType]}
+          </p>
         </div>
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="pf-gpa-scale">GPA Scale</label>
-          <input id="pf-gpa-scale" className="input" inputMode="decimal" placeholder="4.0" value={form.gpaScale} onChange={(e) => setForm({...form, gpaScale: e.target.value})} />
+          <label className={styles.label} htmlFor="pf-gpa">GPA</label>
+          <input
+            id="pf-gpa"
+            className="input"
+            inputMode="decimal"
+            placeholder="e.g. 3.6"
+            value={form.gpa}
+            onChange={(e) => {
+              setForm({...form, gpa: e.target.value});
+              if (gpaError) setGpaError(null);
+            }}
+            aria-invalid={gpaError ? true : undefined}
+            aria-describedby={gpaError ? "pf-gpa-error" : undefined}
+          />
+          {gpaError && (
+            <p id="pf-gpa-error" role="alert" style={{fontSize: 13, color: "var(--color-coral)", marginTop: "4px"}}>
+              {gpaError}
+            </p>
+          )}
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="pf-sat">SAT Score</label>
