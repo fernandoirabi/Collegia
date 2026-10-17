@@ -75,8 +75,9 @@ export async function updateStudentProfileAction(
     await recomputeMatchesAfterProfileChange();
     revalidatePath("/profile");
     return { ok: true };
-  } catch {
-    return { ok: false, error: toActionError(new Error("update failed")) };
+  } catch (err) {
+    console.error("[profile] updateStudentProfileAction failed", err);
+    return { ok: false, error: toActionError(err) };
   }
 }
 
@@ -92,8 +93,9 @@ export async function updateStudentPreferencesAction(
     await recomputeMatchesAfterProfileChange();
     revalidatePath("/profile");
     return { ok: true };
-  } catch {
-    return { ok: false, error: toActionError(new Error("update failed")) };
+  } catch (err) {
+    console.error("[profile] updateStudentPreferencesAction failed", err);
+    return { ok: false, error: toActionError(err) };
   }
 }
 
@@ -109,8 +111,9 @@ export async function updateFinancialAidAction(
     await recomputeMatchesAfterProfileChange();
     revalidatePath("/profile");
     return { ok: true };
-  } catch {
-    return { ok: false, error: toActionError(new Error("update failed")) };
+  } catch (err) {
+    console.error("[profile] updateFinancialAidAction failed", err);
+    return { ok: false, error: toActionError(err) };
   }
 }
 
@@ -126,7 +129,8 @@ export async function updateInternationalProfileAction(
     await recomputeMatchesAfterProfileChange();
     revalidatePath("/profile");
     return { ok: true };
-  } catch {
-    return { ok: false, error: toActionError(new Error("update failed")) };
+  } catch (err) {
+    console.error("[profile] updateInternationalProfileAction failed", err);
+    return { ok: false, error: toActionError(err) };
   }
 }

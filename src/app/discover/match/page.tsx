@@ -7,6 +7,7 @@ import { ArrowRight, Sparkles, ChevronRight, Check, Plus, ChevronDown, MapPin, C
 import Link from "next/link";
 import { saveCollegeAction } from "@/actions/saved-colleges";
 import { updateStudentPreferencesAction, updateStudentProfileAction } from "@/actions/profile";
+import { useSession } from "next-auth/react";
 import { createGoalAction } from "@/actions/goals";
 import CollegeImage from "@/components/ui/CollegeImage";
 import type { BalancedCollegeListView, BalancedCollegeListItem } from "@/lib/services/college-list-builder.service";
@@ -400,7 +401,23 @@ const BUDGET_RANGES: Record<string, number> = {
   "$65,000+": 70000,
 };
 
+// The wizard submission, shared by both persistence (signed-in students)
+// and the match stream (which uses it directly for guests).
+type WizardAcademic = {
+  gpa?: number;
+  gpaScale?: number;
+  satScore?: number | null;
+  intendedMajor?: string;
+};
+type WizardPrefs = {
+  annualBudget?: number;
+  preferredSizes?: string[];
+  preferredRegions?: string[];
+};
+type WizardPayload = { academic: WizardAcademic; prefs: WizardPrefs };
+
 export default function MatchPage() {
+  const { status: sessionStatus } = useSession();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({
     gpa: "",
@@ -441,8 +458,21 @@ export default function MatchPage() {
     setStage("profile");
 
     try {
-      // Phase 0 — persist the wizard answers (real client->server work).
-      const persistErr = await persistWizardProfile();
+      // Build the wizard payload once. The same validated answers are both
+      // persisted (signed-in students) and sent to the match stream (used
+      // directly for guests), so persistence and matching stay in sync.
+      const payload = buildWizardPayload();
+      if ("error" in payload) {
+        if (isMounted.current) setError(payload.error);
+        submittingRef.current = false;
+        if (isMounted.current) setLoading(false);
+        return;
+      }
+
+      // Phase 0 — persist the wizard answers for authenticated students only.
+      // Guests keep their answers in the request body; nothing is written to
+      // the database without a session.
+      const persistErr = await persistWizardProfile(payload);
       if (persistErr) {
         if (isMounted.current) setError(persistErr);
         submittingRef.current = false;
@@ -453,7 +483,7 @@ export default function MatchPage() {
 
       // Phase 1+ — stream the actual match pipeline so the progress bar
       // tracks real server stages instead of a fabricated percentage.
-      await streamMatch();
+      await streamMatch(payload);
     } catch {
       if (isMounted.current) setError("Unable to compute your matches right now.");
     } finally {
@@ -463,9 +493,14 @@ export default function MatchPage() {
     }
   };
 
-  const streamMatch = async () => {
+  const streamMatch = async (payload: WizardPayload) => {
     const signal = activeAbortRef.current?.signal;
-    const res = await fetch("/api/match/stream", { method: "POST", signal });
+    const res = await fetch("/api/match/stream", {
+      method: "POST",
+      signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
     if (!res.ok || !res.body) {
       throw new Error("stream_failed");
     }
@@ -550,15 +585,15 @@ export default function MatchPage() {
     }
   };
 
-  const persistWizardProfile = async (): Promise<string | null> => {
-    const academic: Record<string, unknown> = {};
+  const buildWizardPayload = (): WizardPayload | { error: string } => {
+    const academic: WizardAcademic = {};
 
-    // GPA is required to build the match — always persist the (validated)
+    // GPA is required to build the match — always include the (validated)
     // value together with its Unweighted/Weighted scale so the Match Engine
     // can compare it only against colleges on the same scale.
     const gpaResult = parseGpa(answers.gpa, answers.gpaType);
     if (!gpaResult.valid) {
-      return gpaResult.error ?? "Please enter a valid GPA.";
+      return { error: gpaResult.error ?? "Please enter a valid GPA." };
     }
     if (gpaResult.value != null) {
       academic.gpa = gpaResult.value;
@@ -572,7 +607,7 @@ export default function MatchPage() {
     if (answers.sat.trim()) {
       const satNum = Number(answers.sat.trim());
       if (!Number.isInteger(satNum) || satNum < 400 || satNum > 1600) {
-        return "SAT must be a whole number between 400 and 1600.";
+        return { error: "SAT must be a whole number between 400 and 1600." };
       }
       academic.satScore = satNum;
     } else {
@@ -581,10 +616,21 @@ export default function MatchPage() {
 
     if (answers.major) academic.intendedMajor = answers.major;
 
-    const prefs: Record<string, unknown> = {};
+    const prefs: WizardPrefs = {};
     if (answers.budget && BUDGET_RANGES[answers.budget]) prefs.annualBudget = BUDGET_RANGES[answers.budget];
     if (answers.size && answers.size !== "No preference") prefs.preferredSizes = [answers.size];
     if (answers.location && answers.location !== "No preference") prefs.preferredRegions = [answers.location];
+
+    return { academic, prefs };
+  };
+
+  const persistWizardProfile = async (payload: WizardPayload): Promise<string | null> => {
+    // Guests are never persisted. College Match must not require an account,
+    // so we skip the authenticated-only writes when there is no session and
+    // let the match stream use the submitted answers directly.
+    if (sessionStatus !== "authenticated") return null;
+
+    const { academic, prefs } = payload;
 
     if (Object.keys(academic).length > 0) {
       const res = await updateStudentProfileAction(academic);
