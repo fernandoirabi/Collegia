@@ -49,7 +49,7 @@
 // ============================================================
 
 import { prisma } from "@/lib/db/prisma";
-import { getStudentProfile } from "@/lib/services/profile.service";
+import { getStudentProfile, type StudentProfileView } from "@/lib/services/profile.service";
 import { getSavedCollegeIds } from "@/lib/services/saved-college.service";
 import {
   collegeToEngineCollege,
@@ -622,7 +622,8 @@ export function matchGpaError(gpa: number | null | undefined): string | null {
  */
 export async function getBalancedCollegeListStaged(
   options: ListBuilderOptions = {},
-  onStage: ((stage: MatchPipelineStage) => void) | null
+  onStage: ((stage: MatchPipelineStage) => void) | null,
+  profileOverride?: StudentProfileView
 ): Promise<BalancedCollegeListView> {
   const trace = new PerfTrace("college-list");
 
@@ -636,8 +637,17 @@ export async function getBalancedCollegeListStaged(
   // Firing them together collapses several high-latency round trips into
   // one parallel batch. The joined data is identical, so the result never
   // changes.
+  //
+  // profileOverride lets a caller supply an already-validated, in-memory
+  // profile (e.g. a guest's wizard answers) instead of loading the signed-in
+  // student's profile. When absent, behavior is exactly as before.
+  const profilePromise: Promise<StudentProfileView | null> =
+    profileOverride !== undefined
+      ? Promise.resolve(profileOverride)
+      : getStudentProfile();
+
   const [profile, colleges, savedIds] = await Promise.all([
-    getStudentProfile(),
+    profilePromise,
     prisma.college.findMany({ include: collegeInclude }),
     getSavedCollegeIds(),
   ]);

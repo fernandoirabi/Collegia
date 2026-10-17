@@ -63,6 +63,18 @@ export const preferencesUpdateSchema = z.object({
   requiresScholarship: z.boolean().nullable().optional(),
 });
 
+// Shape of the College Match wizard submission. Used to validate a signed-out
+// visitor's answers on the server so guest matches run without a persisted
+// profile. A GPA is required here (unlike profileUpdateSchema) because the
+// Match Engine needs an academic anchor to produce a meaningful list.
+export const matchWizardInputSchema = z.object({
+  academic: profileUpdateSchema.refine((data) => data.gpa != null, {
+    message: "Please enter your GPA to build your College Match.",
+    path: ["gpa"],
+  }),
+  prefs: preferencesUpdateSchema,
+});
+
 export const financialAidUpdateSchema = z.object({
   annualBudget: z.number().int().min(0).max(1_000_000).nullable().optional(),
   requiresFinancialAid: z.boolean().nullable().optional(),
